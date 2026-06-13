@@ -13,21 +13,22 @@ from datetime import datetime
 # Test configuration
 SCRIPT_DIR = Path(__file__).parent.absolute()
 WORKSPACE_DIR = SCRIPT_DIR / "test_workspace"
-TEST_EXT_DIR = SCRIPT_DIR.parent / "test_extension"
-EXTENSION_FILES = ["arraysum.c", "arraysum.pyf", "build_extension.sh"]
+TEST_EXT_DIR = SCRIPT_DIR / "test_extension"
+EXTENSION_FILES = ["arraysum.c", "arraysum.pyf", "build_extension.sh", "test_uniform.py"]
 LOG_FILE = SCRIPT_DIR / "test_results.log"
 
 # Python versions to test
-# Format: (version, image, numpy_spec, has_numba, has_h5py)
+# Format: (version, image, numpy_spec, numba_spec, h5py_spec)
+# Note: Python 2.7 installs llvmlite==0.29.0 separately (handled in code)
 PYTHON_VERSIONS = [
-    ("2.7", "snakepit:u20", "numpy<1.17", False, True),    # numba doesn't support 2.7
-    ("3.8", "snakepit:u20", "numpy", True, True),
-    ("3.9", "snakepit:u24", "numpy", True, True),
-    ("3.10", "snakepit:u24", "numpy", True, True),
-    ("3.11", "snakepit:u24", "numpy", True, True),
-    ("3.12", "snakepit:u24", "numpy", True, True),
-    ("3.13", "snakepit:u24", "numpy", True, True),
-    ("3.14", "snakepit:u24", "numpy", True, True),
+    ("2.7", "snakepit:u20", "numpy<1.17", "numba==0.45.0", "h5py"),
+    ("3.8", "snakepit:u20", "numpy", "numba", "h5py"),
+    ("3.9", "snakepit:u24", "numpy", "numba", "h5py"),
+    ("3.10", "snakepit:u24", "numpy", "numba", "h5py"),
+    ("3.11", "snakepit:u24", "numpy", "numba", "h5py"),
+    ("3.12", "snakepit:u24", "numpy", "numba", "h5py"),
+    ("3.13", "snakepit:u24", "numpy", "numba", "h5py"),
+    ("3.14", "snakepit:u24", "numpy", "numba", "h5py"),
 ]
 
 
@@ -58,10 +59,10 @@ def log_write(message, strip_colors=True):
 
 def print_header(message):
     """Print a formatted header."""
-    line = f"\n{'='*70}"
-    print(f"\n{Colors.BOLD}{Colors.BLUE}{'='*70}{Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.BLUE}{message}{Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.BLUE}{'='*70}{Colors.RESET}\n")
+    line = "\n" + "="*70
+    print("\n" + Colors.BOLD + Colors.BLUE + "="*70 + Colors.RESET)
+    print(Colors.BOLD + Colors.BLUE + message + Colors.RESET)
+    print(Colors.BOLD + Colors.BLUE + "="*70 + Colors.RESET + "\n")
     log_write(line)
     log_write(message)
     log_write('='*70 + '\n')
@@ -69,20 +70,20 @@ def print_header(message):
 
 def print_success(message):
     """Print a success message."""
-    print(f"{Colors.GREEN}✓ {message}{Colors.RESET}")
-    log_write(f"✓ {message}")
+    print(Colors.GREEN + "✓ " + message + Colors.RESET)
+    log_write("✓ " + message)
 
 
 def print_error(message):
     """Print an error message."""
-    print(f"{Colors.RED}✗ {message}{Colors.RESET}")
-    log_write(f"✗ {message}")
+    print(Colors.RED + "✗ " + message + Colors.RESET)
+    log_write("✗ " + message)
 
 
 def print_step(message):
     """Print a step message."""
-    print(f"{Colors.YELLOW}→ {message}{Colors.RESET}")
-    log_write(f"→ {message}")
+    print(Colors.YELLOW + "→ " + message + Colors.RESET)
+    log_write("→ " + message)
 
 
 def run_docker(image, python_version, command, capture_output=False):
@@ -92,9 +93,9 @@ def run_docker(image, python_version, command, capture_output=False):
     
     docker_cmd = [
         "docker", "run", "--rm",
-        "--user", f"{uid}:{gid}",
+        "--user", str(uid) + ":" + str(gid),
         "-e", "HOME=/workspace",
-        "-v", f"{WORKSPACE_DIR}:/workspace",
+        "-v", str(WORKSPACE_DIR) + ":/workspace",
         "-w", "/workspace",
         image,
         "bash", "-c", command
@@ -120,185 +121,110 @@ def run_docker(image, python_version, command, capture_output=False):
         return 1, "", ""
 
 
-def test_python_version(python_version, image, numpy_version, has_numba, has_h5py):
+def test_python_version(python_version, image, numpy_spec, numba_spec, h5py_spec):
     """
-    Test a specific Python version.
+    Test a specific Python version with uniform test code.
     
     Steps:
     1. Create virtual environment
-    2. Install numpy, numba (if supported), h5py in venv
-    3. Test numba and h5py
-    4. Build C extension with venv python
-    5. Test C extension with venv python
+    2. Install numpy, numba, h5py in venv
+    3. Build C extension with f2py
+    4. Run uniform test script (same code for all Python versions)
     """
-    print_header(f"Testing Python {python_version}")
+    print_header("Testing Python " + python_version)
     
     # Clean version string for venv name
-    venv_name = f"venv_py{python_version.replace('.', '')}"
-    system_py = f"python{python_version}"
-    venv_py = f"{venv_name}/bin/python"
+    venv_name = "venv_py" + python_version.replace(".", "")
+    system_py = "python" + python_version
+    venv_py = venv_name + "/bin/python"
     
     # Step 1: Create virtual environment
-    print_step(f"Step 1: Creating virtual environment with {system_py}")
+    print_step("Step 1: Creating virtual environment with " + system_py)
     
     if python_version == "2.7":
-        create_cmd = f"{system_py} -m virtualenv {venv_name}"
+        create_cmd = system_py + " -m virtualenv " + venv_name
     else:
-        create_cmd = f"{system_py} -m venv {venv_name}"
+        create_cmd = system_py + " -m venv " + venv_name
     
     retcode, stdout, stderr = run_docker(image, python_version, create_cmd, capture_output=True)
     
     if retcode != 0:
-        print_error(f"Failed to create venv")
-        log_write(f"STDOUT:\n{stdout}")
-        log_write(f"STDERR:\n{stderr}")
-        print(f"STDOUT:\n{stdout}")
-        print(f"STDERR:\n{stderr}")
+        print_error("Failed to create venv")
+        log_write("STDOUT:\n" + stdout)
+        log_write("STDERR:\n" + stderr)
+        print("STDOUT:\n" + stdout)
+        print("STDERR:\n" + stderr)
         return False
     
-    print_success(f"Virtual environment created: {venv_name}")
+    print_success("Virtual environment created: " + venv_name)
     
     # Step 2: Install packages in venv
-    print_step(f"Step 2: Installing packages in venv")
+    print_step("Step 2: Installing packages in venv")
     
-    packages = [numpy_version]
-    if has_h5py:
-        packages.append("h5py")
-    if has_numba:
-        packages.append("numba")
+    # For Python 2.7, install llvmlite first due to dependency issues
+    if python_version == "2.7":
+        llvm_cmd = venv_py + " -m pip install --upgrade pip && " + venv_py + " -m pip install 'llvmlite==0.29.0'"
+        retcode, stdout, stderr = run_docker(image, python_version, llvm_cmd, capture_output=True)
+        if retcode != 0:
+            print_error("Failed to install llvmlite")
+            log_write("STDOUT:\n" + stdout)
+            log_write("STDERR:\n" + stderr)
+            print("STDOUT:\n" + stdout)
+            print("STDERR:\n" + stderr)
+            return False
+        packages = [numpy_spec, h5py_spec, "numba==0.45.0"]
+    else:
+        packages = [numpy_spec, h5py_spec, numba_spec]
     
-    packages_str = " ".join([f"'{p}'" for p in packages])
-    install_cmd = f"{venv_py} -m pip install --upgrade pip && {venv_py} -m pip install {packages_str}"
+    packages_str = " ".join(["'" + p + "'" for p in packages])
+    install_cmd = venv_py + " -m pip install " + packages_str
     retcode, stdout, stderr = run_docker(image, python_version, install_cmd, capture_output=True)
     
     if retcode != 0:
-        print_error(f"Failed to install packages")
-        log_write(f"STDOUT:\n{stdout}")
-        log_write(f"STDERR:\n{stderr}")
-        print(f"STDOUT:\n{stdout}")
-        print(f"STDERR:\n{stderr}")
+        print_error("Failed to install packages")
+        log_write("STDOUT:\n" + stdout)
+        log_write("STDERR:\n" + stderr)
+        print("STDOUT:\n" + stdout)
+        print("STDERR:\n" + stderr)
         return False
     
-    print_success(f"Packages installed: {', '.join(packages)}")
-    log_write(f"Installation output:\n{stdout}")
+    print_success("Packages installed: " + ", ".join(packages))
+    log_write("Installation output:\n" + stdout)
     
-    # Step 3: Test h5py
-    if has_h5py:
-        print_step("Step 3a: Testing h5py")
-        h5py_test = f"""cd /workspace && {venv_py} -c '
-import h5py
-import numpy as np
-import tempfile
-import os
-
-# Create temporary h5 file
-with tempfile.NamedTemporaryFile(delete=False, suffix=".h5") as tf:
-    fname = tf.name
-
-try:
-    # Write data
-    with h5py.File(fname, "w") as f:
-        f.create_dataset("test", data=np.array([1, 2, 3, 4, 5]))
+    # Step 3: Build C extension with f2py using venv python
+    print_step("Step 3: Building C extension with f2py")
     
-    # Read data
-    with h5py.File(fname, "r") as f:
-        data = f["test"][:]
-        assert list(data) == [1, 2, 3, 4, 5]
-    
-    print("h5py test passed: write/read HDF5 file successful")
-finally:
-    os.unlink(fname)
-'"""
-        retcode, stdout, stderr = run_docker(image, python_version, h5py_test, capture_output=True)
-        
-        if retcode != 0:
-            print_error("h5py test failed")
-            log_write(f"STDOUT:\n{stdout}")
-            log_write(f"STDERR:\n{stderr}")
-            print(f"STDOUT:\n{stdout}")
-            print(f"STDERR:\n{stderr}")
-            return False
-        
-        print_success("h5py test passed")
-        print(f"  Output: {stdout.strip()}")
-        log_write(f"h5py test output: {stdout.strip()}")
-    
-    # Step 4: Test numba
-    if has_numba:
-        print_step("Step 3b: Testing numba")
-        numba_test = f"""cd /workspace && {venv_py} -c '
-import numba
-import numpy as np
-
-@numba.jit(nopython=True)
-def sum_array(arr):
-    total = 0.0
-    for i in range(len(arr)):
-        total += arr[i]
-    return total
-
-arr = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-result = sum_array(arr)
-assert abs(result - 15.0) < 1e-10
-print("numba test passed: JIT compilation and execution successful")
-'"""
-        retcode, stdout, stderr = run_docker(image, python_version, numba_test, capture_output=True)
-        
-        if retcode != 0:
-            print_error("numba test failed")
-            log_write(f"STDOUT:\n{stdout}")
-            log_write(f"STDERR:\n{stderr}")
-            print(f"STDOUT:\n{stdout}")
-            print(f"STDERR:\n{stderr}")
-            return False
-        
-        print_success("numba test passed")
-        print(f"  Output: {stdout.strip()}")
-        log_write(f"numba test output: {stdout.strip()}")
-    
-    # Step 5: Build C extension with f2py using venv python
-    print_step("Step 4: Building C extension with f2py")
-    
-    build_cmd = f"cd /workspace && bash build_extension.sh {venv_py}"
+    build_cmd = "cd /workspace && bash build_extension.sh " + venv_py
     retcode, stdout, stderr = run_docker(image, python_version, build_cmd, capture_output=True)
     
     if retcode != 0:
         print_error("Failed to build C extension")
-        log_write(f"STDOUT:\n{stdout}")
-        log_write(f"STDERR:\n{stderr}")
-        print(f"STDOUT:\n{stdout}")
-        print(f"STDERR:\n{stderr}")
+        log_write("STDOUT:\n" + stdout)
+        log_write("STDERR:\n" + stderr)
+        print("STDOUT:\n" + stdout)
+        print("STDERR:\n" + stderr)
         return False
     
     print_success("C extension built with f2py")
-    log_write(f"Build output:\n{stdout}")
+    log_write("Build output:\n" + stdout)
     
-    # Step 6: Test C extension with venv python
-    print_step("Step 5: Testing C extension")
+    # Step 4: Run uniform test script
+    print_step("Step 4: Running uniform test (same code for all Python versions)")
     
-    test_cmd = f"""cd /workspace && {venv_py} -c 'import numpy as np
-import arraysum
-a = np.array([1.0, 2.0, 3.0])
-b = np.array([4.0, 5.0, 6.0])
-result = arraysum.array_sum(a, b)
-expected = np.array([5.0, 7.0, 9.0])
-assert np.allclose(result, expected)
-print("Test passed: [1,2,3] + [4,5,6] = [5,7,9]")
-'"""
-    
+    test_cmd = "cd /workspace && " + venv_py + " test_uniform.py"
     retcode, stdout, stderr = run_docker(image, python_version, test_cmd, capture_output=True)
     
     if retcode != 0:
-        print_error("C extension test failed")
-        log_write(f"STDOUT:\n{stdout}")
-        log_write(f"STDERR:\n{stderr}")
-        print(f"STDOUT:\n{stdout}")
-        print(f"STDERR:\n{stderr}")
+        print_error("Uniform test failed")
+        log_write("STDOUT:\n" + stdout)
+        log_write("STDERR:\n" + stderr)
+        print("STDOUT:\n" + stdout)
+        print("STDERR:\n" + stderr)
         return False
     
-    print_success("C extension test passed")
-    print(f"  Output: {stdout.strip()}")
-    log_write(f"Extension test output: {stdout.strip()}")
+    print_success("All tests passed")
+    print("  Output:\n    " + stdout.strip().replace("\n", "\n    "))
+    log_write("Test output:\n" + stdout)
     
     return True
 
@@ -334,29 +260,29 @@ def main():
     # Open log file
     _log_file = open(LOG_FILE, 'w')
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_write(f"Snakepit Test Suite - {timestamp}\n")
+    log_write("Snakepit Test Suite - " + timestamp + "\n")
     
     try:
         print_header("Snakepit Docker Image Test Suite")
-        print(f"Logging to: {LOG_FILE}")
-        log_write(f"Logging to: {LOG_FILE}\n")
+        print("Logging to: " + str(LOG_FILE))
+        log_write("Logging to: " + str(LOG_FILE) + "\n")
         
         # Prepare workspace
         prepare_workspace()
         
         # Run tests
         results = {}
-        for python_version, image, numpy_version, has_numba, has_h5py in PYTHON_VERSIONS:
-            success = test_python_version(python_version, image, numpy_version, has_numba, has_h5py)
+        for python_version, image, numpy_spec, numba_spec, h5py_spec in PYTHON_VERSIONS:
+            success = test_python_version(python_version, image, numpy_spec, numba_spec, h5py_spec)
             results[python_version] = success
             
             if not success:
-                print_error(f"Python {python_version} test FAILED")
-                log_write(f"Python {python_version} test FAILED")
+                print_error("Python " + python_version + " test FAILED")
+                log_write("Python " + python_version + " test FAILED")
                 print("\nStopping tests to fix this issue first.")
-                print(f"\nTo debug, you can run:")
-                print(f"  docker run --rm -it --user $(id -u):$(id -g) -e HOME=/workspace \\")
-                print(f"    -v {WORKSPACE_DIR}:/workspace -w /workspace {image} bash")
+                print("\nTo debug, you can run:")
+                print("  docker run --rm -it --user $(id -u):$(id -g) -e HOME=/workspace \\")
+                print("    -v " + str(WORKSPACE_DIR) + ":/workspace -w /workspace " + image + " bash")
                 log_write("\nStopping tests to fix this issue first.")
                 return 1
         
@@ -368,14 +294,14 @@ def main():
         
         for version, success in results.items():
             if success:
-                print_success(f"Python {version}")
+                print_success("Python " + version)
             else:
-                print_error(f"Python {version}")
+                print_error("Python " + version)
         
-        summary = f"\nResults: {passed}/{total} passed\n"
-        print(f"\n{Colors.BOLD}{summary}{Colors.RESET}")
+        summary = "\nResults: " + str(passed) + "/" + str(total) + " passed\n"
+        print("\n" + Colors.BOLD + summary + Colors.RESET)
         log_write(summary)
-        log_write(f"\nLog file: {LOG_FILE}")
+        log_write("\nLog file: " + str(LOG_FILE))
         
         return 0 if passed == total else 1
     
