@@ -1,0 +1,26 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update and install basic tools
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    software-properties-common \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python 3.12 (default in Ubuntu 24.04) with dev headers and venv
+RUN apt-get update && apt-get install -y \
+    python3.12 \
+    python3.12-dev \
+    python3.12-venv \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify installations
+RUN python3.12 --version && python3.12 -m pip --version
+
+WORKDIR /workspace
+
+CMD ["/bin/bash"]
