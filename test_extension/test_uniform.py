@@ -11,7 +11,12 @@ import numpy as np
 import h5py
 import numba
 
+print("=" * 70)
 print("Python version: " + sys.version)
+print("NumPy version:  " + np.__version__)
+print("h5py version:   " + h5py.__version__)
+print("numba version:  " + numba.__version__)
+print("=" * 70)
 
 # Test 1: h5py
 print("\n=== Testing h5py ===")

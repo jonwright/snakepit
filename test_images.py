@@ -14,21 +14,20 @@ from datetime import datetime
 SCRIPT_DIR = Path(__file__).parent.absolute()
 WORKSPACE_DIR = SCRIPT_DIR / "test_workspace"
 TEST_EXT_DIR = SCRIPT_DIR / "test_extension"
-EXTENSION_FILES = ["arraysum.c", "arraysum.pyf", "build_extension.sh", "test_uniform.py"]
+EXTENSION_FILES = ["arraysum.c", "arraysum.pyf", "build_extension.sh", "test_uniform.py", "run_tests.sh", "requirements.txt"]
 LOG_FILE = SCRIPT_DIR / "test_results.log"
 
 # Python versions to test
-# Format: (version, image, numpy_spec, numba_spec, h5py_spec)
-# Note: Python 2.7 installs llvmlite==0.29.0 separately (handled in code)
+# Format: (version, image)
 PYTHON_VERSIONS = [
-    ("2.7", "snakepit:u20", "numpy<1.17", "numba==0.45.0", "h5py"),
-    ("3.8", "snakepit:u20", "numpy", "numba", "h5py"),
-    ("3.9", "snakepit:u24", "numpy", "numba", "h5py"),
-    ("3.10", "snakepit:u24", "numpy", "numba", "h5py"),
-    ("3.11", "snakepit:u24", "numpy", "numba", "h5py"),
-    ("3.12", "snakepit:u24", "numpy", "numba", "h5py"),
-    ("3.13", "snakepit:u24", "numpy", "numba", "h5py"),
-    ("3.14", "snakepit:u24", "numpy", "numba", "h5py"),
+    ("2.7", "snakepit:u20"),
+    ("3.8", "snakepit:u20"),
+    ("3.9", "snakepit:u24"),
+    ("3.10", "snakepit:u24"),
+    ("3.11", "snakepit:u24"),
+    ("3.12", "snakepit:u24"),
+    ("3.13", "snakepit:u24"),
+    ("3.14", "snakepit:u24"),
 ]
 
 
@@ -121,101 +120,28 @@ def run_docker(image, python_version, command, capture_output=False):
         return 1, "", ""
 
 
-def test_python_version(python_version, image, numpy_spec, numba_spec, h5py_spec):
+def test_python_version(python_version, image):
     """
-    Test a specific Python version with uniform test code.
+    Test a specific Python version.
     
-    Steps:
-    1. Create virtual environment
-    2. Install numpy, numba, h5py in venv
-    3. Build C extension with f2py
-    4. Run uniform test script (same code for all Python versions)
+    Runs a single Docker command that:
+    1. Creates virtual environment
+    2. Installs packages from requirements.txt (handles version dependencies)
+    3. Builds C extension with f2py
+    4. Runs uniform test script
     """
     print_header("Testing Python " + python_version)
     
-    # Clean version string for venv name
-    venv_name = "venv_py" + python_version.replace(".", "")
     system_py = "python" + python_version
-    venv_py = venv_name + "/bin/python"
     
-    # Step 1: Create virtual environment
-    print_step("Step 1: Creating virtual environment with " + system_py)
+    # Single command to run all tests
+    print_step("Running unified test with " + system_py)
     
-    if python_version == "2.7":
-        create_cmd = system_py + " -m virtualenv " + venv_name
-    else:
-        create_cmd = system_py + " -m venv " + venv_name
-    
-    retcode, stdout, stderr = run_docker(image, python_version, create_cmd, capture_output=True)
-    
-    if retcode != 0:
-        print_error("Failed to create venv")
-        log_write("STDOUT:\n" + stdout)
-        log_write("STDERR:\n" + stderr)
-        print("STDOUT:\n" + stdout)
-        print("STDERR:\n" + stderr)
-        return False
-    
-    print_success("Virtual environment created: " + venv_name)
-    
-    # Step 2: Install packages in venv
-    print_step("Step 2: Installing packages in venv")
-    
-    # For Python 2.7, install llvmlite first due to dependency issues
-    if python_version == "2.7":
-        llvm_cmd = venv_py + " -m pip install --upgrade pip && " + venv_py + " -m pip install 'llvmlite==0.29.0'"
-        retcode, stdout, stderr = run_docker(image, python_version, llvm_cmd, capture_output=True)
-        if retcode != 0:
-            print_error("Failed to install llvmlite")
-            log_write("STDOUT:\n" + stdout)
-            log_write("STDERR:\n" + stderr)
-            print("STDOUT:\n" + stdout)
-            print("STDERR:\n" + stderr)
-            return False
-        packages = [numpy_spec, h5py_spec, "numba==0.45.0"]
-    else:
-        packages = [numpy_spec, h5py_spec, numba_spec]
-    
-    packages_str = " ".join(["'" + p + "'" for p in packages])
-    install_cmd = venv_py + " -m pip install " + packages_str
-    retcode, stdout, stderr = run_docker(image, python_version, install_cmd, capture_output=True)
-    
-    if retcode != 0:
-        print_error("Failed to install packages")
-        log_write("STDOUT:\n" + stdout)
-        log_write("STDERR:\n" + stderr)
-        print("STDOUT:\n" + stdout)
-        print("STDERR:\n" + stderr)
-        return False
-    
-    print_success("Packages installed: " + ", ".join(packages))
-    log_write("Installation output:\n" + stdout)
-    
-    # Step 3: Build C extension with f2py using venv python
-    print_step("Step 3: Building C extension with f2py")
-    
-    build_cmd = "cd /workspace && bash build_extension.sh " + venv_py
-    retcode, stdout, stderr = run_docker(image, python_version, build_cmd, capture_output=True)
-    
-    if retcode != 0:
-        print_error("Failed to build C extension")
-        log_write("STDOUT:\n" + stdout)
-        log_write("STDERR:\n" + stderr)
-        print("STDOUT:\n" + stdout)
-        print("STDERR:\n" + stderr)
-        return False
-    
-    print_success("C extension built with f2py")
-    log_write("Build output:\n" + stdout)
-    
-    # Step 4: Run uniform test script
-    print_step("Step 4: Running uniform test (same code for all Python versions)")
-    
-    test_cmd = "cd /workspace && " + venv_py + " test_uniform.py"
+    test_cmd = "cd /workspace && bash run_tests.sh " + system_py
     retcode, stdout, stderr = run_docker(image, python_version, test_cmd, capture_output=True)
     
     if retcode != 0:
-        print_error("Uniform test failed")
+        print_error("Test failed")
         log_write("STDOUT:\n" + stdout)
         log_write("STDERR:\n" + stderr)
         print("STDOUT:\n" + stdout)
@@ -223,7 +149,7 @@ def test_python_version(python_version, image, numpy_spec, numba_spec, h5py_spec
         return False
     
     print_success("All tests passed")
-    print("  Output:\n    " + stdout.strip().replace("\n", "\n    "))
+    print("\n" + stdout.strip())
     log_write("Test output:\n" + stdout)
     
     return True
@@ -272,8 +198,8 @@ def main():
         
         # Run tests
         results = {}
-        for python_version, image, numpy_spec, numba_spec, h5py_spec in PYTHON_VERSIONS:
-            success = test_python_version(python_version, image, numpy_spec, numba_spec, h5py_spec)
+        for python_version, image in PYTHON_VERSIONS:
+            success = test_python_version(python_version, image)
             results[python_version] = success
             
             if not success:

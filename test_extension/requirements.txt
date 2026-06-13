@@ -1,0 +1,14 @@
+# Requirements for testing scientific Python extensions
+# Works across Python 2.7 through 3.14+
+
+# NumPy
+numpy<1.17 ; python_version < "3"
+numpy ; python_version >= "3"
+
+# H5Py
+h5py ; python_version >= "2.7"
+
+# Numba and LLVM
+llvmlite==0.29.0 ; python_version < "3"
+numba==0.45.0 ; python_version < "3"
+numba ; python_version >= "3"
