@@ -18,7 +18,8 @@ RUN apt-get update && apt-get install -y \
 # Install pip for Python 2.7
 RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py -o get-pip.py && \
     python2.7 get-pip.py && \
-    rm get-pip.py
+    rm get-pip.py && \
+    python2.7 -m pip install virtualenv
 
 # Install Python 3.8 (default in Ubuntu 20.04)
 RUN apt-get update && apt-get install -y \
