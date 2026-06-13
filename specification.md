@@ -1,133 +1,287 @@
-# Snakepit: Multi-Python Version Testing Environment
+# Snakepit: Multi-Python Docker Images for Scientific Extension Testing
 
 ## Overview
 
-Snakepit provides Docker/Apptainer images for testing scientific Python extensions across multiple Python versions. The images contain system-installed Python interpreters with development headers, allowing users to create virtual environments on mounted filesystems and test C extensions with numpy.
+Snakepit provides Docker/Apptainer container images for testing scientific Python C extensions across multiple Python versions, with a focus on supporting legacy Python 2.7 and modern Python 3.x versions.
 
-## Image Specifications
+## Project Goals
 
-### Image 1: snakepit:u20 (Ubuntu 20.04)
+1. **Support testing C extensions** across a wide range of Python versions
+2. **Enable testing with NumPy/SciPy** from PyPI via virtual environments
+3. **Work in HPC environments** where Apptainer (formerly Singularity) is common
+4. **Maintain proper file ownership** when mounting host filesystems
+5. **Include all necessary build tools** (gcc, Python dev headers, etc.)
 
-**Base:** Ubuntu 20.04 LTS
+## Architecture
 
-**Python Versions:**
-- Python 2.7 (from system repositories)
-- Python 3.8 (from system repositories - default for Ubuntu 20.04)
+### Two-Image Strategy
 
-**System Packages:**
-- git
-- build-essential (gcc, g++, make, etc.)
-- python2.7, python2.7-dev
-- python3.8, python3.8-dev, python3.8-venv
-- pip for each Python version
+The project uses two base images to handle different Python versions and their dependencies:
 
-### Image 2: snakepit:u24 (Ubuntu 24.04)
+#### Image 1: `snakepit:u20` (Ubuntu 20.04)
+- **Python 2.7** (from Ubuntu 20.04 repos)
+- **Python 3.6** (from Ubuntu 20.04 repos)
+- **Python 3.7** (from Ubuntu 20.04 repos)
+- **Python 3.8** (from Ubuntu 20.04 repos)
 
-**Base:** Ubuntu 24.04 LTS
+#### Image 2: `snakepit:u24` (Ubuntu 24.04)
+- **Python 3.9** (from deadsnakes PPA)
+- **Python 3.10** (from deadsnakes PPA)
+- **Python 3.11** (from deadsnakes PPA)
+- **Python 3.12** (from deadsnakes PPA)
+- **Python 3.13** (from deadsnakes PPA)
+- **Python 3.14** (from deadsnakes PPA)
 
-**Python Versions:**
-- Python 3.9.25 (via uv)
-- Python 3.10.20 (via uv)
-- Python 3.11.15 (via uv)
-- Python 3.12.3 (from system repositories - default for Ubuntu 24.04)
-- Python 3.13.14 (via uv)
-- Python 3.14.6 (via uv)
+### Common Components
 
-**System Packages:**
-- git
-- build-essential (gcc, g++, make, etc.)
-- uv (Python version manager)
-- python3.12, python3.12-dev, python3.12-venv
-- pip for all Python versions
+Both images include:
+- **Git** - for repository operations
+- **build-essential** - gcc, make, and other build tools
+- **Python development headers** (`python-dev` packages) for all versions
+- **Python venv support** for all versions
+- **pip** bootstrapped for each Python version
 
 ## Usage Workflow
 
-1. **Mount local filesystem** into the container
-2. **Create virtual environment** using Python from the container:
-   ```bash
-   docker run -v $(pwd):/workspace snakepit:u24 python3.11 -m venv /workspace/venv_py311
-   ```
-3. **Install numpy/scipy** into the venv:
-   ```bash
-   source venv_py311/bin/activate
-   pip install numpy scipy
-   ```
-4. **Build C extensions** using numpy.f2py or other tools
+### 1. Run Container with Volume Mount
 
-## Extension Build Process
+Mount your local workspace into the container at `/workspace`:
 
-The recommended workflow for testing C extensions:
+```bash
+# For Python 2.7, 3.6, 3.7, 3.8
+docker run --rm -it --user $(id -u):$(id -g) \
+  -e HOME=/workspace \
+  -v /path/to/your/project:/workspace \
+  -w /workspace \
+  snakepit:u20 bash
 
-1. Write a C function (no Python.h headers needed for f2py)
-2. Create an f2py signature file (.pyf)
-3. Generate wrapper code: `python -m numpy.f2py module.pyf`
-4. Compile manually:
-   ```bash
-   gcc -shared -fPIC \
-       -I$(python -c "import sysconfig; print(sysconfig.get_path('include'))") \
-       -I$(python -c "import numpy; print(numpy.get_include())") \
-       -I$(python -c "import numpy, os; print(os.path.join(os.path.dirname(numpy.__file__), 'f2py', 'src'))") \
-       modulemodule.c module.c \
-       $(python -c "import numpy, os; print(os.path.join(os.path.dirname(numpy.__file__), 'f2py', 'src', 'fortranobject.c'))") \
-       -o module.so
-   ```
+# For Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+docker run --rm -it --user $(id -u):$(id -g) \
+  -e HOME=/workspace \
+  -v /path/to/your/project:/workspace \
+  -w /workspace \
+  snakepit:u24 bash
+```
 
-This approach avoids dependency on Python version-specific build systems (distutils/setuptools/meson).
+### 2. Create Virtual Environment
 
-## Test Case
+Inside the container, create a virtual environment for the desired Python version:
 
-A reference test extension is provided that:
-- Takes two numpy arrays as input
-- Sums them element-wise
-- Returns the result array
+```bash
+# Example for Python 2.7
+python2.7 -m virtualenv venv_py27
+source venv_py27/bin/activate
 
-This validates that:
-- The Python interpreter works
-- Virtual environments can be created
-- numpy installs correctly
-- C extensions compile and link properly
-- The extension can be imported and used
+# Example for Python 3.11
+python3.11 -m venv venv_py311
+source venv_py311/bin/activate
+```
 
-## Design Rationale
+### 3. Install NumPy/SciPy
+
+```bash
+# Inside activated venv
+python -m pip install --upgrade pip
+python -m pip install numpy scipy
+```
+
+### 4. Build C Extension
+
+Use NumPy's f2py or standard distutils/setuptools:
+
+```bash
+# Using f2py
+python -m numpy.f2py -c -m mymodule mymodule.f
+
+# Or with build script
+python setup.py build_ext --inplace
+```
+
+## File Ownership
+
+**Critical**: Always run containers with `--user $(id -u):$(id -g)` to ensure files created inside the container have the correct ownership on the host filesystem. This is essential for:
+- HPC environments where you don't have root access
+- Preventing permission issues with mounted volumes
+- Compatibility with Apptainer (which runs non-root by default)
+
+## Apptainer/Singularity Usage
+
+Convert Docker images to Apptainer format:
+
+```bash
+# Build Apptainer image from Docker
+apptainer build snakepit_u20.sif docker-daemon://snakepit:u20
+apptainer build snakepit_u24.sif docker-daemon://snakepit:u24
+
+# Run with Apptainer
+apptainer exec --bind /path/to/project:/workspace snakepit_u24.sif bash
+```
+
+## Testing
+
+The repository includes a comprehensive test suite (`test_images.py`) that validates:
+
+1. **Virtual environment creation** for each Python version
+2. **NumPy installation** in the venv
+3. **C extension compilation** using f2py
+4. **Extension functionality** via a simple array-sum test
+
+### Running Tests
+
+```bash
+# Test all Python versions in both images
+python3 test_images.py
+```
+
+The test creates a simple C extension (`arraysum.c`) that:
+- Takes two NumPy arrays as input
+- Adds them element-wise
+- Returns the result
+- Validates the computation
+
+## Build Instructions
+
+### Building Docker Images
+
+```bash
+# Build Ubuntu 20.04 image (Python 2.7, 3.6, 3.7, 3.8)
+docker build -f Dockerfile.u20 -t snakepit:u20 .
+
+# Build Ubuntu 24.04 image (Python 3.9-3.14)
+docker build -f Dockerfile.u24 -t snakepit:u24 .
+```
+
+### Building with Apptainer
+
+```bash
+# From Dockerfiles
+apptainer build snakepit_u20.sif Dockerfile.u20
+apptainer build snakepit_u24.sif Dockerfile.u24
+
+# From Docker images (if already built)
+apptainer build snakepit_u20.sif docker-daemon://snakepit:u20
+apptainer build snakepit_u24.sif docker-daemon://snakepit:u24
+```
+
+## Technical Details
+
+### Python Version Sources
+
+- **Python 2.7, 3.6, 3.7, 3.8**: Ubuntu 20.04 official repositories
+- **Python 3.9-3.14**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
 
 ### Why Two Images?
 
-- **Ubuntu 20.04**: Last LTS with Python 2.7 in official repositories; also includes Python 3.8
-- **Ubuntu 24.04**: Modern LTS with comprehensive Python 3.x coverage (3.9-3.14) using `uv`
+1. **Ubuntu 20.04** is the last LTS release with Python 2.7 in official repos
+2. **Ubuntu 24.04** provides newer toolchains for modern Python versions
+3. Splitting reduces individual image size
+4. Allows independent updates for legacy vs. modern Python ecosystems
 
-Combined, these images provide Python versions: **2.7, 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14**
+### Virtual Environment Strategy
 
-### Why System Python?
+Virtual environments are created **outside** the container images for several reasons:
 
-- Consistent, reproducible environments
-- No need to build Python from source
-- Faster image builds
-- Standard installation paths
+1. **Flexibility**: Users can install any version of NumPy/SciPy
+2. **Caching**: venvs persist across container runs via volume mounts
+3. **Isolation**: Each Python version gets its own independent environment
+4. **Size**: Keeps container images minimal
 
-### Why Virtual Environments Outside the Container?
+### Development Headers
 
-- Allows testing with different numpy versions without rebuilding images
-- Enables sharing venvs across container runs
-- Separates image build from dependency installation
-- User controls numpy/scipy versions
+All Python versions include development headers (`Python.h`, etc.) which are essential for:
+- Compiling C extensions
+- NumPy f2py integration
+- Cython modules
+- SWIG bindings
 
-### Why Manual Compilation?
+The build system uses `distutils.sysconfig.get_python_inc()` to correctly locate headers even within virtual environments.
 
-- numpy's f2py build system changed significantly in Python 3.12+
-- Manual compilation works consistently across all Python versions
-- Avoids dependencies on meson, ninja, distutils, or setuptools
-- More control over the build process
+## Example: Testing Across All Versions
+
+```bash
+#!/bin/bash
+# test_all_versions.sh
+
+VERSIONS_U20="2.7 3.6 3.7 3.8"
+VERSIONS_U24="3.9 3.10 3.11 3.12 3.13 3.14"
+
+# Test on u20 image
+for ver in $VERSIONS_U20; do
+    echo "Testing Python $ver on snakepit:u20..."
+    docker run --rm --user $(id -u):$(id -g) -e HOME=/workspace \
+      -v $(pwd):/workspace -w /workspace snakepit:u20 bash -c "
+        python${ver} -m venv venv_py${ver//.}
+        source venv_py${ver//.}/bin/activate
+        pip install numpy
+        python setup.py build_ext --inplace
+        python -m pytest
+      "
+done
+
+# Test on u24 image
+for ver in $VERSIONS_U24; do
+    echo "Testing Python $ver on snakepit:u24..."
+    docker run --rm --user $(id -u):$(id -g) -e HOME=/workspace \
+      -v $(pwd):/workspace -w /workspace snakepit:u24 bash -c "
+        python${ver} -m venv venv_py${ver//.}
+        source venv_py${ver//.}/bin/activate
+        pip install numpy
+        python setup.py build_ext --inplace
+        python -m pytest
+      "
+done
+```
+
+## Repository Structure
+
+```
+snakepit/
+├── Dockerfile.u20          # Ubuntu 20.04 image (Python 2.7, 3.6, 3.7, 3.8)
+├── Dockerfile.u24          # Ubuntu 24.04 image (Python 3.9-3.14)
+├── specification.md        # This document
+├── README.md              # User guide and quick start
+├── test_images.py         # Automated test suite
+└── test_extension/        # Example C extension for testing
+    ├── arraysum.c         # C implementation
+    ├── arraysum.pyf       # f2py interface definition
+    └── build_extension.sh # Build script
+```
+
+## Compatibility Notes
+
+### Python 2.7
+- Uses `virtualenv` instead of `venv` (installed via pip)
+- NumPy 1.16.x is the last version supporting Python 2.7
+- SciPy 1.2.x is the last version supporting Python 2.7
+
+### Python 3.6, 3.7
+- End-of-life but still common in legacy HPC environments
+- Latest compatible NumPy: 1.19.x (3.6), 1.21.x (3.7)
+
+### Python 3.14
+- Bleeding edge, may have limited NumPy/SciPy support
+- Included for forward compatibility testing
 
 ## Future Enhancements
 
-Potential additions:
-- Legacy Python versions (3.6, 3.7) if needed (must be built from source - EOL)
-- Apptainer .def files alongside Dockerfiles
-- CI/CD for automated image builds
-- Multi-architecture support (amd64, arm64)
-- Pre-built wheels for common test scenarios
+Potential improvements for future versions:
 
-## Notes
+1. **Pre-built wheels cache** - mount a pip cache to speed up NumPy installs
+2. **Multi-arch support** - ARM64 variants for Apple Silicon and ARM servers
+3. **Additional tools** - OpenBLAS, MKL, FFTW for performance testing
+4. **CI/CD integration** - GitHub Actions workflow for automated testing
+5. **Alternative compilers** - Intel, Clang variants for compatibility testing
 
-- **Python 3.6 and 3.7** have reached end-of-life and are no longer available in Ubuntu repositories or deadsnakes PPA. If needed, they must be built from source.
-- **Python 2.7** is the primary use case for the Ubuntu 20.04 image, as it's the last Ubuntu LTS to include it in official repositories.
+## License
+
+To be determined by repository owner.
+
+## Contributing
+
+Contributions welcome! Please test across all Python versions before submitting pull requests.
+
+## Acknowledgments
+
+- [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) for modern Python versions
+- Ubuntu team for maintaining Python packages in official repos
+- NumPy team for f2py and the C API

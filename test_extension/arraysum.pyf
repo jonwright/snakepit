@@ -1,0 +1,12 @@
+python module arraysum
+interface
+    subroutine array_sum(a, b, result, n)
+        intent(c) array_sum
+        intent(c)
+        double precision dimension(n), intent(in) :: a
+        double precision dimension(n), intent(in) :: b
+        double precision dimension(n), intent(out) :: result
+        integer intent(hide), depend(a) :: n = len(a)
+    end subroutine array_sum
+end interface
+end python module arraysum
