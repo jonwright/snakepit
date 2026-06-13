@@ -119,12 +119,32 @@ apptainer exec --bind /path/to/project:/workspace snakepit_u24.sif bash
 
 ## Testing
 
-The repository includes a comprehensive test suite (`test_images.py`) that validates:
+The repository includes a comprehensive test suite with **uniform code** that works across all Python versions (2.7-3.14).
 
-1. **Virtual environment creation** for each Python version
-2. **NumPy installation** in the venv
-3. **C extension compilation** using f2py
-4. **Extension functionality** via a simple array-sum test
+### Key Testing Features
+
+1. **Version-conditional requirements.txt** - Uses Python's `python_version` markers to install appropriate packages
+2. **No special-casing** - Same test code runs on all Python versions
+3. **Single command per version** - One docker run command does everything
+4. **Comprehensive validation** - Tests NumPy, h5py, numba, and C extensions
+
+### Requirements File
+
+The `test_extension/requirements.txt` uses conditional dependencies:
+
+```txt
+# NumPy
+numpy<1.17 ; python_version < "3"
+numpy ; python_version >= "3"
+
+# H5Py  
+h5py ; python_version >= "2.7"
+
+# Numba and LLVM
+llvmlite==0.29.0 ; python_version < "3"
+numba==0.45.0 ; python_version < "3"
+numba ; python_version >= "3"
+```
 
 ### Running Tests
 
@@ -133,11 +153,32 @@ The repository includes a comprehensive test suite (`test_images.py`) that valid
 python3 test_images.py
 ```
 
+### Manual Testing
+
+You can also manually test a specific Python version:
+
+```bash
+# Mount your test directory and run the unified test script
+docker run --rm --user $(id -u):$(id -g) -e HOME=/workspace \
+  -v $(pwd)/test_extension:/workspace -w /workspace \
+  snakepit:u24 bash run_tests.sh python3.11
+```
+
+The test validates:
+- **Virtual environment creation** for each Python version
+- **Package installation** from requirements.txt (with correct versions)
+- **C extension compilation** using f2py
+- **Extension functionality** via a simple array-sum test
+- **h5py** - HDF5 file read/write operations
+- **numba** - JIT compilation and execution
+
 The test creates a simple C extension (`arraysum.c`) that:
 - Takes two NumPy arrays as input
-- Adds them element-wise
+- Adds them element-wise  
 - Returns the result
 - Validates the computation
+
+All tests print package versions for verification.
 
 ## Build Instructions
 
@@ -241,10 +282,13 @@ snakepit/
 ├── specification.md        # This document
 ├── README.md              # User guide and quick start
 ├── test_images.py         # Automated test suite
-└── test_extension/        # Example C extension for testing
+└── test_extension/        # Example C extension and tests
     ├── arraysum.c         # C implementation
     ├── arraysum.pyf       # f2py interface definition
-    └── build_extension.sh # Build script
+    ├── build_extension.sh # Build script
+    ├── requirements.txt   # Version-conditional package dependencies
+    ├── run_tests.sh       # Unified test runner for all Python versions
+    └── test_uniform.py    # Uniform test code (works on Python 2.7-3.14)
 ```
 
 ## Compatibility Notes
