@@ -18,8 +18,20 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
-# Verify installations
-RUN python3.12 --version && python3.12 -m pip --version
+# Install uv for managing additional Python versions
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install Python 3.9, 3.10, 3.11, 3.13, 3.14 via uv
+ENV PATH="/root/.local/bin:${PATH}"
+RUN uv python install 3.9 3.10 3.11 3.13 3.14
+
+# Verify all Python installations
+RUN python3.9 --version && \
+    python3.10 --version && \
+    python3.11 --version && \
+    python3.12 --version && \
+    python3.13 --version && \
+    python3.14 --version
 
 WORKDIR /workspace
 

@@ -29,8 +29,10 @@ docker run -it -v $(pwd):/workspace snakepit:u24
 - Ideal for testing legacy code
 
 ### snakepit:u24 (Ubuntu 24.04)
-- Python 3.12
-- Modern Python testing
+- Python 3.9, 3.10, 3.11 (via uv)
+- Python 3.12 (system)
+- Python 3.13, 3.14 (via uv)
+- Comprehensive modern Python coverage
 
 ## Typical Workflow
 

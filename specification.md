@@ -26,13 +26,19 @@ Snakepit provides Docker/Apptainer images for testing scientific Python extensio
 **Base:** Ubuntu 24.04 LTS
 
 **Python Versions:**
-- Python 3.12 (from system repositories - default for Ubuntu 24.04)
+- Python 3.9.25 (via uv)
+- Python 3.10.20 (via uv)
+- Python 3.11.15 (via uv)
+- Python 3.12.3 (from system repositories - default for Ubuntu 24.04)
+- Python 3.13.14 (via uv)
+- Python 3.14.6 (via uv)
 
 **System Packages:**
 - git
 - build-essential (gcc, g++, make, etc.)
+- uv (Python version manager)
 - python3.12, python3.12-dev, python3.12-venv
-- pip for Python 3.12
+- pip for all Python versions
 
 ## Usage Workflow
 
@@ -87,7 +93,9 @@ This validates that:
 ### Why Two Images?
 
 - **Ubuntu 20.04**: Last LTS with Python 2.7 in official repositories; also includes Python 3.8
-- **Ubuntu 24.04**: Modern LTS with Python 3.12 (for testing against current Python)
+- **Ubuntu 24.04**: Modern LTS with comprehensive Python 3.x coverage (3.9-3.14) using `uv`
+
+Combined, these images provide Python versions: **2.7, 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14**
 
 ### Why System Python?
 
@@ -113,7 +121,7 @@ This validates that:
 ## Future Enhancements
 
 Potential additions:
-- Older Python versions (3.6, 3.7, 3.9) built from source if needed
+- Legacy Python versions (3.6, 3.7) if needed (must be built from source - EOL)
 - Apptainer .def files alongside Dockerfiles
 - CI/CD for automated image builds
 - Multi-architecture support (amd64, arm64)
