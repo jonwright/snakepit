@@ -4,8 +4,8 @@
 
 PYTHON=${1:-python}
 
-# Get paths - use distutils for better venv compatibility
-PYTHON_INC=$($PYTHON -c "import distutils.sysconfig; print(distutils.sysconfig.get_python_inc())")
+# Get paths - use sysconfig (works with Python 3.14+, distutils removed in 3.12+)
+PYTHON_INC=$($PYTHON -c "import sysconfig; print(sysconfig.get_path('include'))")
 NUMPY_INC=$($PYTHON -c "import numpy; print(numpy.get_include())")
 F2PY_SRC=$($PYTHON -c "import numpy; import os; print(os.path.join(os.path.dirname(numpy.__file__), 'f2py', 'src'))")
 

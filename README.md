@@ -1,59 +1,58 @@
 # Snakepit 🐍
 
-Multi-Python Docker/Apptainer images for testing scientific Python C extensions across Python 2.7 through 3.14.
+Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.14.
 
 ## Quick Start
 
-### Build Images
+### Build Containers
 
 ```bash
-docker build -f Dockerfile.u20 -t snakepit:u20 .
-docker build -f Dockerfile.u24 -t snakepit:u24 .
+apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
+apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 ```
 
-### Run Tests
+No `sudo` required—uses Apptainer's fakeroot capability.
+
+### Test a Python Version
 
 ```bash
-python3 test_images.py
+./test_in_container.sh python3.14 ubuntu24.04.sif
+./test_in_container.sh python2.7 ubuntu20.04.sif
 ```
 
-### Use Images
+### Use Containers
 
 ```bash
-# Run container for Python 2.7, 3.6, 3.7, 3.8
-docker run --rm -it --user $(id -u):$(id -g) \
-  -e HOME=/workspace \
-  -v $(pwd):/workspace \
-  -w /workspace \
-  snakepit:u20 bash
+# Interactive shell for Python 2.7, 3.8 (Ubuntu 20.04)
+apptainer exec --bind $(pwd):/workspace ubuntu20.04.sif bash
 
-# Run container for Python 3.9-3.14
-docker run --rm -it --user $(id -u):$(id -g) \
-  -e HOME=/workspace \
-  -v $(pwd):/workspace \
-  -w /workspace \
-  snakepit:u24 bash
+# Interactive shell for Python 3.9-3.14 (Ubuntu 24.04)
+apptainer exec --bind $(pwd):/workspace ubuntu24.04.sif bash
 ```
 
 ## Supported Python Versions
 
-| Image | Python Versions |
-|-------|----------------|
-| `snakepit:u20` | 2.7, 3.6, 3.7, 3.8 |
-| `snakepit:u24` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 |
+| Container | Python Versions |
+|-----------|----------------|
+| `ubuntu20.04.sif` | 2.7, 3.8 |
+| `ubuntu24.04.sif` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 |
 
 ## Features
 
 - ✅ All Python versions include development headers
 - ✅ Git and build-essential pre-installed
 - ✅ Supports NumPy f2py for building Fortran/C extensions
-- ✅ Works with Apptainer/Singularity for HPC environments
-- ✅ Proper file ownership with `--user` flag
+- ✅ **No sudo required**—built with fakeroot
+- ✅ Automatic file ownership (non-root by default)
 - ✅ Virtual environments persist on mounted volumes
+- ✅ Perfect for HPC environments
 
 ## Example Workflow
 
 ```bash
+# Run container with workspace mount
+apptainer exec --bind $(pwd):/workspace ubuntu24.04.sif bash
+
 # Inside container
 python3.11 -m venv venv_py311
 source venv_py311/bin/activate
@@ -73,25 +72,26 @@ See [specification.md](specification.md) for complete documentation including:
 
 ## Testing
 
-The `test_images.py` script validates all Python versions by:
+The `test_in_container.sh` script tests a specific Python version by:
 1. Creating a virtual environment
-2. Installing NumPy
+2. Installing NumPy and required packages
 3. Building a test C extension with f2py
 4. Running the extension and validating output
+5. Testing h5py and numba functionality
 
 A simple C extension test case is provided in `test_extension/` directory.
 
-## Apptainer Usage
+### Run Tests
 
 ```bash
-# Convert Docker images to Apptainer
-apptainer build snakepit_u20.sif docker-daemon://snakepit:u20
-apptainer build snakepit_u24.sif docker-daemon://snakepit:u24
+# Test a specific Python version
+./test_in_container.sh python3.11 ubuntu24.04.sif
 
-# Run with Apptainer
-apptainer exec --bind $(pwd):/workspace snakepit_u24.sif \
-  python3.12 -m venv /workspace/venv_py312
+# Test Python 2.7
+./test_in_container.sh python2.7 ubuntu20.04.sif
 ```
+
+All tests validate NumPy, h5py, numba, and C extension compilation/execution.
 
 ## License
 

@@ -1,0 +1,52 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%help
+    Ubuntu 20.04 container with Python 2.7 and Python 3.8
+
+%labels
+    Author OpenHands
+    Version 1.0
+    BaseOS Ubuntu 20.04
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Update and install basic tools
+    apt-get update && apt-get install -y \
+        git \
+        build-essential \
+        curl \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install Python 2.7
+    apt-get update && apt-get install -y \
+        python2.7 \
+        python2.7-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install pip for Python 2.7
+    curl https://bootstrap.pypa.io/pip/2.7/get-pip.py -o get-pip.py && \
+        python2.7 get-pip.py && \
+        rm get-pip.py && \
+        python2.7 -m pip install virtualenv
+
+    # Install Python 3.8 (default in Ubuntu 20.04)
+    apt-get update && apt-get install -y \
+        python3.8 \
+        python3.8-dev \
+        python3.8-venv \
+        python3-pip \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Verify installations
+    python2.7 --version && \
+        python3.8 --version && \
+        python2.7 -m pip --version && \
+        python3.8 -m pip --version
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+
+%runscript
+    exec /bin/bash "$@"
