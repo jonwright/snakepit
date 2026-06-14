@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for snakepit Docker images.
+Test script for snakepit Apptainer images.
 Tests that each Python version can create venvs, install numpy/numba/h5py, and build C extensions.
 """
 import os
@@ -18,16 +18,16 @@ EXTENSION_FILES = ["arraysum.c", "arraysum.pyf", "build_extension.sh", "test_uni
 LOG_FILE = SCRIPT_DIR / "test_results.log"
 
 # Python versions to test
-# Format: (version, image)
+# Format: (version, sif_file)
 PYTHON_VERSIONS = [
-    ("2.7", "snakepit:u20"),
-    ("3.8", "snakepit:u20"),
-    ("3.9", "snakepit:u24"),
-    ("3.10", "snakepit:u24"),
-    ("3.11", "snakepit:u24"),
-    ("3.12", "snakepit:u24"),
-    ("3.13", "snakepit:u24"),
-    ("3.14", "snakepit:u24"),
+    ("2.7", "ubuntu20.04.sif"),
+    ("3.8", "ubuntu20.04.sif"),
+    ("3.9", "ubuntu24.04.sif"),
+    ("3.10", "ubuntu24.04.sif"),
+    ("3.11", "ubuntu24.04.sif"),
+    ("3.12", "ubuntu24.04.sif"),
+    ("3.13", "ubuntu24.04.sif"),
+    ("3.14", "ubuntu24.04.sif"),
 ]
 
 
@@ -85,46 +85,44 @@ def print_step(message):
     log_write(">> " + message)
 
 
-def run_docker(image, python_version, command, capture_output=False):
-    """Run a command in a Docker container."""
-    uid = os.getuid()
-    gid = os.getgid()
+def run_apptainer(sif_file, python_version, command, capture_output=False):
+    """Run a command in an Apptainer container."""
+    sif_path = SCRIPT_DIR / sif_file
     
-    docker_cmd = [
-        "docker", "run", "--rm",
-        "--user", str(uid) + ":" + str(gid),
-        "-e", "HOME=/workspace",
-        "-v", str(WORKSPACE_DIR) + ":/workspace",
-        "-w", "/workspace",
-        image,
-        "bash", "-c", command
+    apptainer_cmd = [
+        "apptainer", "exec",
+        "-e",
+        "-B", str(WORKSPACE_DIR) + ":/workspace",
+        "--pwd", "/workspace",
+        str(sif_path),
+        "/bin/bash", "-c", command
     ]
     
     try:
         if capture_output:
             result = subprocess.run(
-                docker_cmd,
+                apptainer_cmd,
                 capture_output=True,
                 text=True,
                 timeout=300
             )
             return result.returncode, result.stdout, result.stderr
         else:
-            result = subprocess.run(docker_cmd, timeout=300)
+            result = subprocess.run(apptainer_cmd, timeout=300)
             return result.returncode, "", ""
     except subprocess.TimeoutExpired:
-        print_error(f"Command timed out after 300 seconds")
+        print_error("Command timed out after 300 seconds")
         return 1, "", ""
     except Exception as e:
-        print_error(f"Error running docker: {e}")
+        print_error("Error running apptainer: " + str(e))
         return 1, "", ""
 
 
-def test_python_version(python_version, image):
+def test_python_version(python_version, sif_file):
     """
     Test a specific Python version.
     
-    Runs a single Docker command that:
+    Runs a single Apptainer command that:
     1. Creates virtual environment
     2. Installs packages from requirements.txt (handles version dependencies)
     3. Builds C extension with f2py
@@ -138,7 +136,7 @@ def test_python_version(python_version, image):
     print_step("Running unified test with " + system_py)
     
     test_cmd = "cd /workspace && bash run_tests.sh " + system_py
-    retcode, stdout, stderr = run_docker(image, python_version, test_cmd, capture_output=True)
+    retcode, stdout, stderr = run_apptainer(sif_file, python_version, test_cmd, capture_output=True)
     
     if retcode != 0:
         print_error("Test failed")
@@ -189,7 +187,7 @@ def main():
     log_write("Snakepit Test Suite - " + timestamp + "\n")
     
     try:
-        print_header("Snakepit Docker Image Test Suite")
+        print_header("Snakepit Apptainer Image Test Suite")
         print("Logging to: " + str(LOG_FILE))
         log_write("Logging to: " + str(LOG_FILE) + "\n")
         
@@ -198,8 +196,8 @@ def main():
         
         # Run tests
         results = {}
-        for python_version, image in PYTHON_VERSIONS:
-            success = test_python_version(python_version, image)
+        for python_version, sif_file in PYTHON_VERSIONS:
+            success = test_python_version(python_version, sif_file)
             results[python_version] = success
             
             if not success:
@@ -207,8 +205,8 @@ def main():
                 log_write("Python " + python_version + " test FAILED")
                 print("\nStopping tests to fix this issue first.")
                 print("\nTo debug, you can run:")
-                print("  docker run --rm -it --user $(id -u):$(id -g) -e HOME=/workspace \\")
-                print("    -v " + str(WORKSPACE_DIR) + ":/workspace -w /workspace " + image + " bash")
+                sif_path = SCRIPT_DIR / sif_file
+                print("  apptainer shell -e -B " + str(WORKSPACE_DIR) + ":/workspace " + str(sif_path))
                 log_write("\nStopping tests to fix this issue first.")
                 return 1
         
