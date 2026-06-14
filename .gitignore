@@ -16,6 +16,9 @@ test_extension/*module.c
 test_extension/*-f2pywrappers.f
 test_results.log
 
+# Container artifacts
+*.sif
+
 # Editor
 .vscode/
 .idea/

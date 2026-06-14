@@ -1,4 +1,4 @@
-# Snakepit 🐍
+# Snakepit
 
 Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.14.
 
@@ -11,7 +11,7 @@ apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 ```
 
-No `sudo` required—uses Apptainer's fakeroot capability.
+No `sudo` required - uses Apptainer's fakeroot capability.
 
 ### Test a Python Version
 
@@ -39,13 +39,13 @@ apptainer exec --bind $(pwd):/workspace ubuntu24.04.sif bash
 
 ## Features
 
-- ✅ All Python versions include development headers
-- ✅ Git and build-essential pre-installed
-- ✅ Supports NumPy f2py for building Fortran/C extensions
-- ✅ **No sudo required**—built with fakeroot
-- ✅ Automatic file ownership (non-root by default)
-- ✅ Virtual environments persist on mounted volumes
-- ✅ Perfect for HPC environments
+- [OK] All Python versions include development headers
+- [OK] Git and build-essential pre-installed
+- [OK] Supports NumPy f2py for building Fortran/C extensions
+- [OK] **No sudo required** - built with fakeroot
+- [OK] Automatic file ownership (non-root by default)
+- [OK] Virtual environments persist on mounted volumes
+- [OK] Perfect for HPC environments
 
 ## Example Workflow
 

@@ -256,22 +256,21 @@ done
 
 ```
 snakepit/
-├── ubuntu20.04.def        # Apptainer definition (Python 2.7, 3.8)
-├── ubuntu24.04.def        # Apptainer definition (Python 3.9-3.14)
-├── ubuntu20.04.sif        # Built container (generated)
-├── ubuntu24.04.sif        # Built container (generated)
-├── specification.md       # This document
-├── README.md              # User guide and quick start
-├── TEST_RESULTS.md        # Test results and verification
-├── test_images.py         # Automated test suite
-├── test_in_container.sh   # Test runner script
-└── test_extension/        # Example C extension and tests
-    ├── arraysum.c         # C implementation
-    ├── arraysum.pyf       # f2py interface definition
-    ├── build_extension.sh # Build script (updated for Python 3.14)
-    ├── requirements.txt   # Version-conditional package dependencies
-    ├── run_tests.sh       # Unified test runner for all Python versions
-    └── test_uniform.py    # Uniform test code (works on Python 2.7-3.14)
+|-- ubuntu20.04.def        # Apptainer definition (Python 2.7, 3.8)
+|-- ubuntu24.04.def        # Apptainer definition (Python 3.9-3.14)
+|-- ubuntu20.04.sif        # Built container (generated)
+|-- ubuntu24.04.sif        # Built container (generated)
+|-- specification.md       # This document
+|-- README.md              # User guide and quick start
+|-- test_images.py         # Automated test suite
+|-- test_in_container.sh   # Test runner script
+`-- test_extension/        # Example C extension and tests
+    |-- arraysum.c         # C implementation
+    |-- arraysum.pyf       # f2py interface definition
+    |-- build_extension.sh # Build script (updated for Python 3.14)
+    |-- requirements.txt   # Version-conditional package dependencies
+    |-- run_tests.sh       # Unified test runner for all Python versions
+    `-- test_uniform.py    # Uniform test code (works on Python 2.7-3.14)
 ```
 
 ## Compatibility Notes

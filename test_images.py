@@ -69,20 +69,20 @@ def print_header(message):
 
 def print_success(message):
     """Print a success message."""
-    print(Colors.GREEN + "✓ " + message + Colors.RESET)
-    log_write("✓ " + message)
+    print(Colors.GREEN + "[OK] " + message + Colors.RESET)
+    log_write("[OK] " + message)
 
 
 def print_error(message):
     """Print an error message."""
-    print(Colors.RED + "✗ " + message + Colors.RESET)
-    log_write("✗ " + message)
+    print(Colors.RED + "[FAIL] " + message + Colors.RESET)
+    log_write("[FAIL] " + message)
 
 
 def print_step(message):
     """Print a step message."""
-    print(Colors.YELLOW + "→ " + message + Colors.RESET)
-    log_write("→ " + message)
+    print(Colors.YELLOW + ">> " + message + Colors.RESET)
+    log_write(">> " + message)
 
 
 def run_docker(image, python_version, command, capture_output=False):
