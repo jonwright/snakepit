@@ -14,17 +14,19 @@ Snakepit provides Apptainer container images for testing scientific Python C ext
 
 ## Architecture
 
-### Two-Image Strategy
+### Three-Image Strategy
 
 The project uses two base images to handle different Python versions and their dependencies:
 
 #### Image 1: `snakepit:u20` (Ubuntu 20.04)
 - **Python 2.7** (from Ubuntu 20.04 repos)
-- **Python 3.6** (from Ubuntu 20.04 repos)
-- **Python 3.7** (from Ubuntu 20.04 repos)
 - **Python 3.8** (from Ubuntu 20.04 repos)
 
-#### Image 2: `snakepit:u24` (Ubuntu 24.04)
+#### Image 2: `snakepit:deb10` (Debian 10)
+- **Python 3.6** (from official python:3.6.15-buster Docker image)
+
+#### Image 3: `snakepit:u24` (Ubuntu 24.04)
+- **Python 3.7** (from deadsnakes PPA)
 - **Python 3.9** (from deadsnakes PPA)
 - **Python 3.10** (from deadsnakes PPA)
 - **Python 3.11** (from deadsnakes PPA)
@@ -52,7 +54,11 @@ Mount your local workspace into the container at `/workspace`:
 apptainer exec --bind /path/to/your/project:/workspace \
   ubuntu20.04.sif bash
 
-# For Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 (Ubuntu 24.04)
+# For Python 3.6 (Debian 10)
+apptainer exec --bind /path/to/your/project:/workspace \
+  debian10.sif bash
+
+# For Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 (Ubuntu 24.04)
 apptainer exec --bind /path/to/your/project:/workspace \
   ubuntu24.04.sif bash
 ```
@@ -101,7 +107,10 @@ Build the Apptainer SIF images using fakeroot (no sudo required):
 # Build Ubuntu 20.04 container (Python 2.7, 3.8)
 apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
 
-# Build Ubuntu 24.04 container (Python 3.9-3.14)
+# Build Debian 10 container (Python 3.6)
+apptainer build --fakeroot debian10.sif debian10.def
+
+# Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14)
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 ```
 
@@ -177,7 +186,10 @@ All tests print package versions for verification.
 # Build Ubuntu 20.04 container (Python 2.7, 3.8)
 apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
 
-# Build Ubuntu 24.04 container (Python 3.9-3.14)
+# Build Debian 10 container (Python 3.6)
+apptainer build --fakeroot debian10.sif debian10.def
+
+# Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14)
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 ```
 
@@ -187,15 +199,18 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
 
 ### Python Version Sources
 
-- **Python 2.7, 3.6, 3.7, 3.8**: Ubuntu 20.04 official repositories
+- **Python 2.7, 3.8**: Ubuntu 20.04 official repositories
+- **Python 3.6**: Official [python:3.6.15-buster](https://hub.docker.com/_/python) Docker image (Debian 10)
+- **Python 3.7**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
 - **Python 3.9-3.14**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
 
-### Why Two Images?
+### Why Three Images?
 
-1. **Ubuntu 20.04** is the last LTS release with Python 2.7 in official repos
-2. **Ubuntu 24.04** provides newer toolchains for modern Python versions
-3. Splitting reduces individual image size
-4. Allows independent updates for legacy vs. modern Python ecosystems
+1. **Ubuntu 20.04** holds Python 2.7 (last LTS with official support)
+2. **Debian 10** provides Python 3.6 via official Docker image
+3. **Ubuntu 24.04** provides newer toolchains for Python 3.7+
+4. Splitting reduces individual image sizes
+5. Allows independent updates for legacy vs. modern Python ecosystems
 
 ### Virtual Environment Strategy
 
@@ -223,7 +238,8 @@ The build system uses `distutils.sysconfig.get_python_inc()` to correctly locate
 # test_all_versions.sh
 
 VERSIONS_U20="2.7 3.8"
-VERSIONS_U24="3.9 3.10 3.11 3.12 3.13 3.14"
+VERSIONS_DEB10="3.6"
+VERSIONS_U24="3.7 3.9 3.10 3.11 3.12 3.13 3.14"
 
 # Test on u20 container
 for ver in $VERSIONS_U20; do
@@ -257,7 +273,8 @@ done
 ```
 snakepit/
 |-- ubuntu20.04.def        # Apptainer definition (Python 2.7, 3.8)
-|-- ubuntu24.04.def        # Apptainer definition (Python 3.9-3.14)
+|-- debian10.def           # Apptainer definition (Python 3.6)
+|-- ubuntu24.04.def        # Apptainer definition (Python 3.7, 3.9-3.14)
 |-- ubuntu20.04.sif        # Built container (generated)
 |-- ubuntu24.04.sif        # Built container (generated)
 |-- specification.md       # This document

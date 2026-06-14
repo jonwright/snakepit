@@ -17,20 +17,20 @@
 - Unicode arrows, checkmarks, mathematical symbols, etc.
 
 **EXAMPLES OF WHAT TO REPLACE:**
-- ✓ (checkmark) → `[OK]` or `OK`
-- ✗ (cross) → `[FAIL]` or `FAIL`
-- → (arrow) → `>>` or `-->`
-- 🐍 (emoji) → remove or spell out `snake`
-- ├──, └── (box drawing) → `|--`, `` `--`
-- — (em dash) → `-` (hyphen)
-- " " (smart quotes) → `"` (regular quotes)
+- checkmark symbol -> `[OK]` or `OK`
+- cross/multiplication symbol -> `[FAIL]` or `FAIL`
+- arrow symbol -> `>>` or `-->`
+- snake emoji -> remove or spell out `snake`
+- box-drawing chars (e.g. tree branches) -> `|--`, `` `--`
+- em dash -> `-` (hyphen)
+- smart quotes -> `"` (regular quotes)
 
 ### Files Modified for ASCII Compliance
 - README.md: Removed emoji, replaced checkmarks with [OK]
-- SUMMARY.md: Box-drawing characters → ASCII tree format
-- specification.md: Box-drawing characters → ASCII format
-- test_images.py: Unicode symbols → ASCII markers
-- test_results.log: Unicode symbols → ASCII markers
+- SUMMARY.md: Box-drawing characters --> ASCII tree format
+- specification.md: Box-drawing characters --> ASCII format
+- test_images.py: Unicode symbols --> ASCII markers
+- test_results.log: Unicode symbols --> ASCII markers
 
 ### Verification
 
@@ -57,6 +57,7 @@ Snakepit is a multi-Python Apptainer container testing suite for scientific Pyth
 Build containers (no sudo required - uses fakeroot):
 ```bash
 apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
+apptainer build --fakeroot debian10.sif debian10.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 ```
 
@@ -67,7 +68,8 @@ Test a Python version:
 
 ### Supported Python Versions
 - **ubuntu20.04.sif**: Python 2.7, 3.8
-- **ubuntu24.04.sif**: Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+- **debian10.sif**: Python 3.6
+- **ubuntu24.04.sif**: Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
 
 ### Key Files
 - `ubuntu20.04.def` / `ubuntu24.04.def`: Apptainer container definitions

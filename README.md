@@ -8,6 +8,7 @@ Multi-Python Apptainer containers for testing scientific Python C extensions acr
 
 ```bash
 apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
+apptainer build --fakeroot debian10.sif debian10.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 ```
 
@@ -26,7 +27,10 @@ No `sudo` required - uses Apptainer's fakeroot capability.
 # Interactive shell for Python 2.7, 3.8 (Ubuntu 20.04)
 apptainer exec --bind $(pwd):/workspace ubuntu20.04.sif bash
 
-# Interactive shell for Python 3.9-3.14 (Ubuntu 24.04)
+# Interactive shell for Python 3.6 (Debian 10)
+apptainer exec --bind $(pwd):/workspace debian10.sif bash
+
+# Interactive shell for Python 3.7, 3.9-3.14 (Ubuntu 24.04)
 apptainer exec --bind $(pwd):/workspace ubuntu24.04.sif bash
 ```
 
@@ -34,8 +38,11 @@ apptainer exec --bind $(pwd):/workspace ubuntu24.04.sif bash
 
 | Container | Python Versions |
 |-----------|----------------|
+| Container | Python Versions |
+|-----------|----------------|
 | `ubuntu20.04.sif` | 2.7, 3.8 |
-| `ubuntu24.04.sif` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 |
+| `debian10.sif` | 3.6 |
+| `ubuntu24.04.sif` | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 |
 
 ## Features
 

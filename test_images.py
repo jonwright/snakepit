@@ -22,6 +22,8 @@ LOG_FILE = SCRIPT_DIR / "test_results.log"
 PYTHON_VERSIONS = [
     ("2.7", "ubuntu20.04.sif"),
     ("3.8", "ubuntu20.04.sif"),
+    ("3.6", "debian10.sif"),
+    ("3.7", "ubuntu24.04.sif"),
     ("3.9", "ubuntu24.04.sif"),
     ("3.10", "ubuntu24.04.sif"),
     ("3.11", "ubuntu24.04.sif"),

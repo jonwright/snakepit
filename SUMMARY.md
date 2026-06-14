@@ -54,7 +54,7 @@ The Apptainer container just provides the Python interpreter and build tools.
 
 ## Test Results
 
-All 8 Python versions tested successfully:
+All 9 Python versions tested successfully:
 
 | Python Version | NumPy Version | h5py Version | numba Version | Status |
 |----------------|---------------|--------------|---------------|---------|

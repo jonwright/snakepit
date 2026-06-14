@@ -1,0 +1,23 @@
+Bootstrap: docker
+From: python:3.6.15-buster
+
+%help
+    Debian 10 (Buster) container with Python 3.6.15
+
+%labels
+    Author OpenHands
+    Version 1.0
+    BaseOS Debian 10
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    python3.6 --version && \
+        python3.6 -m pip --version && \
+        gcc --version | head -1
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+
+%runscript
+    exec /bin/bash "$@"
