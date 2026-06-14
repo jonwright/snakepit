@@ -31,27 +31,16 @@ PYTHON_VERSIONS = [
 ]
 
 
-class Colors:
-    """ANSI color codes for output."""
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    RESET = '\033[0m'
-    BOLD = '\033[1m'
+
 
 
 # Global log file handle
 _log_file = None
 
 
-def log_write(message, strip_colors=True):
+def log_write(message):
     """Write a message to the log file."""
     if _log_file:
-        if strip_colors:
-            # Strip ANSI color codes
-            import re
-            message = re.sub(r'\033\[[0-9;]+m', '', message)
         _log_file.write(message + '\n')
         _log_file.flush()
 
@@ -59,9 +48,9 @@ def log_write(message, strip_colors=True):
 def print_header(message):
     """Print a formatted header."""
     line = "\n" + "="*70
-    print("\n" + Colors.BOLD + Colors.BLUE + "="*70 + Colors.RESET)
-    print(Colors.BOLD + Colors.BLUE + message + Colors.RESET)
-    print(Colors.BOLD + Colors.BLUE + "="*70 + Colors.RESET + "\n")
+    print("\n" + "="*70)
+    print(message)
+    print("="*70 + "\n")
     log_write(line)
     log_write(message)
     log_write('='*70 + '\n')
@@ -69,19 +58,19 @@ def print_header(message):
 
 def print_success(message):
     """Print a success message."""
-    print(Colors.GREEN + "[OK] " + message + Colors.RESET)
+    print("[OK] " + message)
     log_write("[OK] " + message)
 
 
 def print_error(message):
     """Print an error message."""
-    print(Colors.RED + "[FAIL] " + message + Colors.RESET)
+    print("[FAIL] " + message)
     log_write("[FAIL] " + message)
 
 
 def print_step(message):
     """Print a step message."""
-    print(Colors.YELLOW + ">> " + message + Colors.RESET)
+    print(">> " + message)
     log_write(">> " + message)
 
 
@@ -223,7 +212,7 @@ def main():
                 print_error("Python " + version)
         
         summary = "\nResults: " + str(passed) + "/" + str(total) + " passed\n"
-        print("\n" + Colors.BOLD + summary + Colors.RESET)
+        print(summary)
         log_write(summary)
         log_write("\nLog file: " + str(LOG_FILE))
         
