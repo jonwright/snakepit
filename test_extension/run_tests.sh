@@ -3,6 +3,7 @@
 # Usage: run_tests.sh <python_command>
 # Example: run_tests.sh python2.7
 #          run_tests.sh python3.11
+#          run_tests.sh python3.14t
 
 set -e
 
@@ -15,21 +16,33 @@ echo "========================================================================"
 echo "Setting up test environment with ${PYTHON_CMD}"
 echo "========================================================================"
 
+# Remove stale venv if present
+rm -rf ${VENV_DIR}
+
 # Create virtual environment
 if [[ "${PYTHON_CMD}" == *"2.7"* ]]; then
     ${PYTHON_CMD} -m virtualenv ${VENV_DIR}
+    source ${VENV_DIR}/bin/activate
+elif [[ "${PYTHON_CMD}" == *"t" ]]; then
+    # Free-threading Python: use uv for venv and pip
+    export PATH="/root/.local/bin:$PATH"
+    uv venv --python ${PYTHON_CMD} ${VENV_DIR}
+    source ${VENV_DIR}/bin/activate
 else
     ${PYTHON_CMD} -m venv ${VENV_DIR}
+    source ${VENV_DIR}/bin/activate
 fi
-
-# Activate venv
-source ${VENV_DIR}/bin/activate
 
 # Install dependencies from requirements.txt
 echo ""
 echo "Installing packages from requirements.txt..."
-python -m pip install --upgrade pip --quiet
-python -m pip install -r requirements.txt --quiet
+if [[ "${PYTHON_CMD}" == *"t" ]]; then
+    # uv-managed Python: use uv pip install (no ensurepip in python-build-standalone)
+    uv pip install -r requirements.txt --quiet
+else
+    python -m pip install --upgrade pip --quiet
+    python -m pip install -r requirements.txt --quiet
+fi
 
 # Build C extension with f2py
 echo ""

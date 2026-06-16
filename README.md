@@ -1,6 +1,6 @@
 # Snakepit
 
-Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.14.
+Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.14, including free-threading (3.14t).
 
 ## Quick Start
 
@@ -30,7 +30,7 @@ apptainer exec --bind $(pwd):/workspace ubuntu20.04.sif bash
 # Interactive shell for Python 3.6 (Debian 10)
 apptainer exec --bind $(pwd):/workspace debian10.sif bash
 
-# Interactive shell for Python 3.7, 3.9-3.14 (Ubuntu 24.04)
+# Interactive shell for Python 3.7, 3.9-3.14, 3.14t (Ubuntu 24.04)
 apptainer exec --bind $(pwd):/workspace ubuntu24.04.sif bash
 ```
 
@@ -42,7 +42,7 @@ apptainer exec --bind $(pwd):/workspace ubuntu24.04.sif bash
 |-----------|----------------|
 | `ubuntu20.04.sif` | 2.7, 3.8 |
 | `debian10.sif` | 3.6 |
-| `ubuntu24.04.sif` | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 |
+| `ubuntu24.04.sif` | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t |
 
 ## Features
 

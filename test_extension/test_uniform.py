@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 Uniform test code for all Python versions (2.7 - 3.14).
+Includes free-threading (3.14t) support.
 Tests h5py, numba, and C extension (arraysum).
 """
 from __future__ import print_function
@@ -16,6 +17,17 @@ print("Python version: " + sys.version)
 print("NumPy version:  " + np.__version__)
 print("h5py version:   " + h5py.__version__)
 print("numba version:  " + numba.__version__)
+
+# Check free-threading status (Python 3.13+)
+freethreading = getattr(sys, "_is_gil_enabled", lambda: None)()
+if freethreading is not None:
+    if freethreading:
+        print("GIL:            enabled")
+    else:
+        print("GIL:            disabled (free-threading)")
+else:
+    print("GIL:            N/A (Python < 3.13)")
+
 print("=" * 70)
 
 # Test 1: h5py

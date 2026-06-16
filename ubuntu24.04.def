@@ -2,7 +2,7 @@ Bootstrap: docker
 From: ubuntu:24.04
 
 %help
-    Ubuntu 24.04 container with Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, and optional 3.14
+    Ubuntu 24.04 container with Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, and optional 3.14t (free-threading)
 
 %labels
     Author OpenHands
@@ -40,17 +40,44 @@ From: ubuntu:24.04
         (apt-get install -y python3.14 python3.14-dev python3.14-venv || echo "Python 3.14 not available yet") && \
         rm -rf /var/lib/apt/lists/*
 
-    # Verify Python installations (skip 3.14 if not installed)
+    # Install uv for managing Python versions (including free-threading builds)
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="/root/.local/bin:$PATH"
+
+    # Install Python 3.14t free-threading via uv (python-build-standalone)
+    uv python install cpython-3.14.0+freethreaded-linux-x86_64-gnu || \
+        uv python install cpython-3.13.0+freethreaded-linux-x86_64-gnu || \
+        echo "Python free-threading build not available via uv"
+
+    # Symlink free-threaded Python to PATH
+    FTPYTHON=$(uv python find cpython-3.14.*+freethreaded* 2>/dev/null || uv python find cpython-3.13.*+freethreaded* 2>/dev/null || true)
+    if [ -n "$FTPYTHON" ]; then
+        FTBIN=$(dirname "$FTPYTHON")
+        ln -s "$FTPYTHON" /usr/local/bin/python3.14t
+        ln -s "$FTBIN"/pip* /usr/local/bin/ 2>/dev/null || true
+        ln -s "$FTBIN"/python*-config /usr/local/bin/ 2>/dev/null || true
+    fi
+
+    # Also install latest regular CPython 3.14 via uv for dev headers
+    uv python install cpython-3.14.*-linux-x86_64-gnu 2>/dev/null || true
+    REGPYTHON=$(uv python find cpython-3.14.*-linux-x86_64-gnu 2>/dev/null | grep -v freethreaded | head -1 || true)
+    if [ -n "$REGPYTHON" ] && [ ! -f /usr/bin/python3.14 ]; then
+        ln -s "$REGPYTHON" /usr/local/bin/python3.14uv
+    fi
+
+    # Verify Python installations (skip 3.14/3.14t if not installed)
     python3.7 --version && \
         python3.9 --version && \
         python3.10 --version && \
         python3.11 --version && \
         python3.12 --version && \
         python3.13 --version && \
-        (python3.14 --version || echo "Python 3.14 not installed")
+        (python3.14 --version || echo "Python 3.14 not installed") && \
+        (python3.14t --version || echo "Python 3.14t (free-threading) not installed")
 
 %environment
     export DEBIAN_FRONTEND=noninteractive
+    export PATH="/root/.local/bin:$PATH"
 
 %runscript
     exec /bin/bash "$@"

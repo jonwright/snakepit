@@ -33,6 +33,7 @@ The project uses two base images to handle different Python versions and their d
 - **Python 3.12** (from deadsnakes PPA)
 - **Python 3.13** (from deadsnakes PPA)
 - **Python 3.14** (from deadsnakes PPA)
+- **Python 3.14t** (free-threading/no-GIL, from deadsnakes PPA)
 
 ### Common Components
 
@@ -58,7 +59,7 @@ apptainer exec --bind /path/to/your/project:/workspace \
 apptainer exec --bind /path/to/your/project:/workspace \
   debian10.sif bash
 
-# For Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 (Ubuntu 24.04)
+# For Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t (Ubuntu 24.04)
 apptainer exec --bind /path/to/your/project:/workspace \
   ubuntu24.04.sif bash
 ```
@@ -110,7 +111,7 @@ apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
 # Build Debian 10 container (Python 3.6)
 apptainer build --fakeroot debian10.sif debian10.def
 
-# Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14)
+# Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14, 3.14t)
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 ```
 
@@ -189,7 +190,7 @@ apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
 # Build Debian 10 container (Python 3.6)
 apptainer build --fakeroot debian10.sif debian10.def
 
-# Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14)
+# Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14, 3.14t)
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 ```
 
@@ -239,7 +240,7 @@ The build system uses `distutils.sysconfig.get_python_inc()` to correctly locate
 
 VERSIONS_U20="2.7 3.8"
 VERSIONS_DEB10="3.6"
-VERSIONS_U24="3.7 3.9 3.10 3.11 3.12 3.13 3.14"
+VERSIONS_U24="3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.14t"
 
 # Test on u20 container
 for ver in $VERSIONS_U20; do
@@ -274,7 +275,7 @@ done
 snakepit/
 |-- ubuntu20.04.def        # Apptainer definition (Python 2.7, 3.8)
 |-- debian10.def           # Apptainer definition (Python 3.6)
-|-- ubuntu24.04.def        # Apptainer definition (Python 3.7, 3.9-3.14)
+|-- ubuntu24.04.def        # Apptainer definition (Python 3.7, 3.9-3.14, 3.14t)
 |-- ubuntu20.04.sif        # Built container (generated)
 |-- ubuntu24.04.sif        # Built container (generated)
 |-- specification.md       # This document
@@ -284,7 +285,7 @@ snakepit/
 `-- test_extension/        # Example C extension and tests
     |-- arraysum.c         # C implementation
     |-- arraysum.pyf       # f2py interface definition
-    |-- build_extension.sh # Build script (updated for Python 3.14)
+    |-- build_extension.sh # Build script (updated for Python 3.14t)
     |-- requirements.txt   # Version-conditional package dependencies
     |-- run_tests.sh       # Unified test runner for all Python versions
     `-- test_uniform.py    # Uniform test code (works on Python 2.7-3.14)
@@ -304,6 +305,12 @@ snakepit/
 ### Python 3.14
 - Bleeding edge, may have limited NumPy/SciPy support
 - Included for forward compatibility testing
+
+### Python 3.14t (Free-Threading)
+- CPython build with the Global Interpreter Lock (GIL) disabled
+- Installed as `python3.14t` from deadsnakes PPA
+- C extensions must be thread-safe - use `sys._is_gil_enabled()` to detect at runtime
+- Enables true parallelism for CPU-bound Python threads
 
 ## Future Enhancements
 

@@ -69,7 +69,7 @@ Test a Python version:
 ### Supported Python Versions
 - **ubuntu20.04.sif**: Python 2.7, 3.8
 - **debian10.sif**: Python 3.6
-- **ubuntu24.04.sif**: Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+- **ubuntu24.04.sif**: Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t
 
 ### Key Files
 - `ubuntu20.04.def` / `ubuntu24.04.def`: Apptainer container definitions
