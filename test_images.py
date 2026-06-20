@@ -31,6 +31,7 @@ PYTHON_VERSIONS = [
     ("3.13", "ubuntu24.04.sif"),
     ("3.14", "ubuntu24.04.sif"),
     ("3.14t", "ubuntu24.04.sif"),
+    ("3.15", "ubuntu26.04.sif"),
 ]
 
 
@@ -127,7 +128,11 @@ def test_python_version(python_version, sif_file):
     # Single command to run all tests
     print_step("Running unified test with " + system_py)
     
-    test_cmd = "cd /workspace && bash run_tests.sh " + system_py
+    # Use "preinstalled" mode for Python 3.15 (packages built into the container)
+    if python_version == "3.15":
+        test_cmd = "cd /workspace && bash run_tests.sh " + system_py + " preinstalled"
+    else:
+        test_cmd = "cd /workspace && bash run_tests.sh " + system_py
     retcode, stdout, stderr = run_apptainer(sif_file, python_version, test_cmd, capture_output=True)
     
     if retcode != 0:

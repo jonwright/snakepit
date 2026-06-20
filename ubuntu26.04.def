@@ -1,0 +1,86 @@
+Bootstrap: docker
+From: ubuntu:26.04
+
+%help
+    Ubuntu 26.04 container with Python 3.15 (pre-release tracking via deadsnakes PPA)
+
+%labels
+    Author OpenHands
+    Version 1.0
+    BaseOS Ubuntu 26.04
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Update and install basic tools
+    apt-get update && apt-get install -y \
+        git \
+        build-essential \
+        software-properties-common \
+        curl \
+        libhdf5-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Add deadsnakes PPA for Python 3.15 (tracks latest beta/rc/final)
+    add-apt-repository ppa:deadsnakes/ppa -y
+
+    # Install Python 3.15 with dev headers and venv
+    apt-get update && apt-get install -y \
+        python3.15 python3.15-dev python3.15-venv \
+        python3-pip \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install uv for managing Python versions (including free-threading builds)
+    # uv is a standalone Python version manager from Astral
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="/root/.local/bin:$PATH"
+
+    # Try to install Python 3.15 free-threading via uv (python-build-standalone)
+    uv python install cpython-3.15.0+freethreaded-linux-x86_64-gnu || \
+        echo "Python 3.15 free-threading not yet available via uv"
+
+    # Symlink free-threaded Python if installed
+    FTPYTHON=$(uv python find cpython-3.15.*+freethreaded* 2>/dev/null || true)
+    if [ -n "$FTPYTHON" ]; then
+        FTBIN=$(dirname "$FTPYTHON")
+        ln -s "$FTPYTHON" /usr/local/bin/python3.15t
+        ln -s "$FTBIN"/pip* /usr/local/bin/ 2>/dev/null || true
+        ln -s "$FTBIN"/python*-config /usr/local/bin/ 2>/dev/null || true
+    fi
+
+    # Create a temporary venv to bootstrap a Python 3.15-compatible pip
+    # (the system pip from apt has incompatible vendored deps for 3.15 beta)
+    python3.15 -m venv /tmp/py315_venv
+    /tmp/py315_venv/bin/pip install --upgrade pip --quiet
+
+    # Pre-install scientific Python packages into system site-packages
+    # using the venv's pip (which is compatible with Python 3.15)
+    # numpy is required for f2py; h5py and numba are optional
+    /tmp/py315_venv/bin/pip install --target=/usr/lib/python3.15/site-packages \
+        numpy --quiet && \
+        echo "numpy pre-installed successfully" || \
+        echo "numpy pre-install failed"
+
+    /tmp/py315_venv/bin/pip install --target=/usr/lib/python3.15/site-packages \
+        h5py --quiet && \
+        echo "h5py pre-installed successfully" || \
+        echo "h5py pre-install not available (no wheel for 3.15)"
+
+    /tmp/py315_venv/bin/pip install --target=/usr/lib/python3.15/site-packages \
+        numba --quiet && \
+        echo "numba pre-installed successfully" || \
+        echo "numba pre-install not available (no wheel for 3.15)"
+
+    # Clean up temporary venv
+    rm -rf /tmp/py315_venv
+
+    # Verify installations
+    python3.15 --version && \
+        (python3.15t --version || echo "Python 3.15t (free-threading) not installed")
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export PATH="/root/.local/bin:$PATH"
+
+%runscript
+    exec /bin/bash "$@"

@@ -10,13 +10,20 @@ import os
 import tempfile
 import numpy as np
 import h5py
-import numba
+try:
+    import numba
+    HAVE_NUMBA = True
+except ImportError:
+    HAVE_NUMBA = False
 
 print("=" * 70)
 print("Python version: " + sys.version)
 print("NumPy version:  " + np.__version__)
 print("h5py version:   " + h5py.__version__)
-print("numba version:  " + numba.__version__)
+if HAVE_NUMBA:
+    print("numba version:  " + numba.__version__)
+else:
+    print("numba version:  N/A (not installed)")
 
 # Check free-threading status (Python 3.13+)
 freethreading = getattr(sys, "_is_gil_enabled", lambda: None)()
@@ -54,17 +61,20 @@ finally:
 # Test 2: numba
 print("\n=== Testing numba ===")
 
-@numba.jit(nopython=True)
-def sum_array(arr):
-    total = 0.0
-    for i in range(len(arr)):
-        total += arr[i]
-    return total
+if HAVE_NUMBA:
+    @numba.jit(nopython=True)
+    def sum_array(arr):
+        total = 0.0
+        for i in range(len(arr)):
+            total += arr[i]
+        return total
 
-arr = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-result = sum_array(arr)
-assert abs(result - 15.0) < 1e-10
-print("numba test PASSED: JIT compilation and execution successful")
+    arr = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    result = sum_array(arr)
+    assert abs(result - 15.0) < 1e-10
+    print("numba test PASSED: JIT compilation and execution successful")
+else:
+    print("numba test SKIPPED: numba not available for this Python version")
 
 # Test 3: C extension (arraysum)
 print("\n=== Testing C extension (arraysum) ===")

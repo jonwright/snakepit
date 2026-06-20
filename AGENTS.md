@@ -59,6 +59,7 @@ Build containers (no sudo required - uses fakeroot):
 apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
 apptainer build --fakeroot debian10.sif debian10.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
+apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
 ```
 
 Test a Python version:
@@ -70,12 +71,14 @@ Test a Python version:
 - **ubuntu20.04.sif**: Python 2.7, 3.8
 - **debian10.sif**: Python 3.6
 - **ubuntu24.04.sif**: Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t
+- **ubuntu26.04.sif**: Python 3.15
 
 ### Key Files
-- `ubuntu20.04.def` / `ubuntu24.04.def`: Apptainer container definitions
+- `ubuntu20.04.def` / `ubuntu24.04.def` / `ubuntu26.04.def`: Apptainer container definitions
 - `test_in_container.sh`: Primary test runner script
 - `test_extension/`: Example C extension with NumPy f2py
 - `test_images.py`: Automated container test suite
+- `SKILL.md`: Detailed container usage guide for AI agents
 
 ### Architecture
 - Apptainer definitions use fakeroot for non-root container building
@@ -103,6 +106,40 @@ This builds both containers and tests all Python versions. Results are logged to
 
 - Prefer conciseness in comments; avoid redundant documentation
 - Keep functions focused and minimal
-- Test code should work identically across Python 2.7-3.14
+- Test code should work identically across Python 2.7-3.15
 - Use `from __future__ import print_function` for Python 2.7 compatibility
 - No f-strings in any Python code that must support Python 2.7
+- See `SKILL.md` for a detailed walkthrough of using these containers, including build commands, testing, and adding new Python versions.
+
+## Container Usage Quick Reference
+
+### Build Containers
+```bash
+apptainer build --fakeroot <name>.sif <name>.def
+```
+
+### Run a Command
+```bash
+apptainer exec <image>.sif python3.X -c "print('hello')"
+```
+
+### Interactive Shell with Volume Mount
+```bash
+apptainer exec --bind $(pwd):/workspace <image>.sif bash
+```
+
+### Test a Python Version
+```bash
+./test_in_container.sh python3.X <image>.sif
+```
+
+### Run Full Test Suite
+```bash
+python3 test_images.py
+```
+
+### Add a New Python Version (4-Step Checklist)
+1. Add `python3.X python3.X-dev python3.X-venv` to the `.def` file's apt install block
+2. Add `("3.X", "<container>.sif")` to `PYTHON_VERSIONS` in `test_images.py`
+3. Rebuild the container: `apptainer build --fakeroot <container>.sif <container>.def`
+4. Run the test suite: `python3 test_images.py`

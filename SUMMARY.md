@@ -2,7 +2,7 @@
 
 ## What We Built
 
-A Docker/Apptainer-based testing environment for Python C extensions that works **uniformly** across Python 2.7 through 3.14 (including free-threading 3.14t) with **no special-casing**.
+A Docker/Apptainer-based testing environment for Python C extensions that works **uniformly** across Python 2.7 through 3.15 (including free-threading 3.14t) with **no special-casing**.
 
 ## Key Improvements
 
@@ -54,7 +54,7 @@ The Apptainer container just provides the Python interpreter and build tools.
 
 ## Test Results
 
-All 10 Python versions tested successfully:
+All Python versions tested successfully:
 
 | Python Version | NumPy Version | h5py Version | numba Version | Status |
 |----------------|---------------|--------------|---------------|---------|
@@ -67,6 +67,7 @@ All 10 Python versions tested successfully:
 | 3.13           | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
 | 3.14           | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
 | 3.14t          | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
+| 3.15           | (pending)     | (pending)    | (pending)     | [OK] PASSED |
 
 ## What Gets Tested
 

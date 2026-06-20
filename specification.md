@@ -14,9 +14,9 @@ Snakepit provides Apptainer container images for testing scientific Python C ext
 
 ## Architecture
 
-### Three-Image Strategy
+### Four-Image Strategy
 
-The project uses two base images to handle different Python versions and their dependencies:
+The project uses four images to handle different Python versions across multiple OS generations:
 
 #### Image 1: `snakepit:u20` (Ubuntu 20.04)
 - **Python 2.7** (from Ubuntu 20.04 repos)
@@ -33,11 +33,15 @@ The project uses two base images to handle different Python versions and their d
 - **Python 3.12** (from deadsnakes PPA)
 - **Python 3.13** (from deadsnakes PPA)
 - **Python 3.14** (from deadsnakes PPA)
-- **Python 3.14t** (free-threading/no-GIL, from deadsnakes PPA)
+- **Python 3.14t** (free-threading/no-GIL, from uv python-build-standalone)
+
+#### Image 4: `snakepit:u26` (Ubuntu 26.04)
+- **Python 3.15** (from deadsnakes PPA -- tracks latest beta/rc/final)
+- **Python 3.15t** (free-threading/no-GIL, from uv python-build-standalone, if available)
 
 ### Common Components
 
-Both images include:
+All images include:
 - **Git** - for repository operations
 - **build-essential** - gcc, make, and other build tools
 - **Python development headers** (`python-dev` packages) for all versions
@@ -62,6 +66,10 @@ apptainer exec --bind /path/to/your/project:/workspace \
 # For Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t (Ubuntu 24.04)
 apptainer exec --bind /path/to/your/project:/workspace \
   ubuntu24.04.sif bash
+
+# For Python 3.15 (Ubuntu 26.04)
+apptainer exec --bind /path/to/your/project:/workspace \
+  ubuntu26.04.sif bash
 ```
 
 ### 2. Create Virtual Environment
@@ -113,6 +121,9 @@ apptainer build --fakeroot debian10.sif debian10.def
 
 # Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14, 3.14t)
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
+
+# Build Ubuntu 26.04 container (Python 3.15)
+apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
 ```
 
 ### File Ownership
@@ -124,7 +135,7 @@ Apptainer runs as a non-root user by default, which means files created inside t
 
 ## Testing
 
-The repository includes a comprehensive test suite with **uniform code** that works across all Python versions (2.7-3.14).
+The repository includes a comprehensive test suite with **uniform code** that works across all Python versions (2.7-3.15).
 
 ### Key Testing Features
 
@@ -192,6 +203,9 @@ apptainer build --fakeroot debian10.sif debian10.def
 
 # Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14, 3.14t)
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
+
+# Build Ubuntu 26.04 container (Python 3.15)
+apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
 ```
 
 The `--fakeroot` flag enables rootless builds without requiring `sudo`, making these containers suitable for HPC environments and non-root deployments.
@@ -204,14 +218,16 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
 - **Python 3.6**: Official [python:3.6.15-buster](https://hub.docker.com/_/python) Docker image (Debian 10)
 - **Python 3.7**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
 - **Python 3.9-3.14**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
+- **Python 3.15**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) (resolute builds for Ubuntu 26.04)
 
-### Why Three Images?
+### Why Four Images?
 
 1. **Ubuntu 20.04** holds Python 2.7 (last LTS with official support)
 2. **Debian 10** provides Python 3.6 via official Docker image
-3. **Ubuntu 24.04** provides newer toolchains for Python 3.7+
-4. Splitting reduces individual image sizes
-5. Allows independent updates for legacy vs. modern Python ecosystems
+3. **Ubuntu 24.04** provides newer toolchains for Python 3.7-3.14
+4. **Ubuntu 26.04** provides the latest toolchain for Python 3.15+
+5. Splitting reduces individual image sizes
+6. Allows independent updates for legacy vs. modern Python ecosystems
 
 ### Virtual Environment Strategy
 
@@ -276,8 +292,12 @@ snakepit/
 |-- ubuntu20.04.def        # Apptainer definition (Python 2.7, 3.8)
 |-- debian10.def           # Apptainer definition (Python 3.6)
 |-- ubuntu24.04.def        # Apptainer definition (Python 3.7, 3.9-3.14, 3.14t)
+|-- ubuntu26.04.def        # Apptainer definition (Python 3.15, 3.15t)
 |-- ubuntu20.04.sif        # Built container (generated)
 |-- ubuntu24.04.sif        # Built container (generated)
+|-- ubuntu26.04.sif        # Built container (generated)
+|-- AGENTS.md              # Agent instructions and quick reference
+|-- SKILL.md               # Detailed container usage guide for AI agents
 |-- specification.md       # This document
 |-- README.md              # User guide and quick start
 |-- test_images.py         # Automated test suite
@@ -288,7 +308,7 @@ snakepit/
     |-- build_extension.sh # Build script (updated for Python 3.14t)
     |-- requirements.txt   # Version-conditional package dependencies
     |-- run_tests.sh       # Unified test runner for all Python versions
-    `-- test_uniform.py    # Uniform test code (works on Python 2.7-3.14)
+    `-- test_uniform.py    # Uniform test code (works on Python 2.7-3.15)
 ```
 
 ## Compatibility Notes
@@ -308,9 +328,15 @@ snakepit/
 
 ### Python 3.14t (Free-Threading)
 - CPython build with the Global Interpreter Lock (GIL) disabled
-- Installed as `python3.14t` from deadsnakes PPA
+- Installed as `python3.14t` from uv python-build-standalone
 - C extensions must be thread-safe - use `sys._is_gil_enabled()` to detect at runtime
 - Enables true parallelism for CPU-bound Python threads
+
+### Python 3.15
+- Pre-release (beta) tracked via deadsnakes PPA - automatically updates as new betas/RCs/final release
+- Installed from `ppa:deadsnakes/ppa` on Ubuntu 26.04
+- Feature freeze already in effect; expected stable: 2026-10-01
+- Free-threading version (`python3.15t`) installed via uv if available in python-build-standalone
 
 ## Future Enhancements
 
