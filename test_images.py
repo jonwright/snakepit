@@ -33,6 +33,14 @@ PYTHON_VERSIONS = [
     ("3.14t", "ubuntu24.04.sif"),
     ("3.15", "ubuntu26.04.sif"),
     ("3.15t", "ubuntu26.04.sif"),
+    # manylinux2014 (CentOS 7, glibc 2.17) covers 3.9-3.14
+    # (3.14t/3.15/3.15t need newer libstdc++ or pre-release wheels not on PyPI)
+    ("3.9", "manylinux2014.sif"),
+    ("3.10", "manylinux2014.sif"),
+    ("3.11", "manylinux2014.sif"),
+    ("3.12", "manylinux2014.sif"),
+    ("3.13", "manylinux2014.sif"),
+    ("3.14", "manylinux2014.sif"),
 ]
 
 
@@ -129,8 +137,8 @@ def test_python_version(python_version, sif_file):
     # Single command to run all tests
     print_step("Running unified test with " + system_py)
     
-    # Use "preinstalled" mode for Python 3.15 (packages built into the container)
-    if python_version == "3.15":
+    # Use "preinstalled" mode for ubuntu26.04 Python 3.15 (packages built into the container)
+    if sif_file == "ubuntu26.04.sif" and python_version == "3.15":
         test_cmd = "cd /workspace && bash run_tests.sh " + system_py + " preinstalled"
     else:
         test_cmd = "cd /workspace && bash run_tests.sh " + system_py

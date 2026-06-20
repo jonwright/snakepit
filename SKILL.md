@@ -20,6 +20,7 @@ This guide teaches you (an LLM/AI agent) how to use these containers effectively
 | `debian10.sif` | Debian 10 (Buster) | 3.6 | Official `python:3.6.15-buster` Docker image |
 | `ubuntu24.04.sif` | Ubuntu 24.04 | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t | deadsnakes PPA + uv (free-threading) |
 | `ubuntu26.04.sif` | Ubuntu 26.04 | 3.15, 3.15t | deadsnakes PPA + uv (free-threading) |
+| `manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 | manylinux2014 image (GCC 10, auditwheel, uv) |
 
 ## Building Containers
 
@@ -30,6 +31,7 @@ apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
 apptainer build --fakeroot debian10.sif debian10.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
+apptainer build --fakeroot manylinux2014.sif manylinux2014.def
 ```
 
 **Note**: First build downloads the base Docker image (1-2 GB). Subsequent builds are fast.
@@ -95,39 +97,25 @@ This iterates through all Python versions across all containers.
 
 ## Adding a New Python Version
 
-Follow these 4 steps:
+Different containers use different package sources. Follow the pattern for your container type:
 
-### Step 1: Update the `.def` File
+### Ubuntu Containers (apt-based)
 
-Find the appropriate container definition and add the new Python package. For modern versions (3.7+), add to `ubuntu24.04.def`:
-
+Add to the `.def` file's apt-get install block:
 ```bash
-# In the apt-get install block, add:
 python3.X python3.X-dev python3.X-venv \
 ```
 
-For new major releases (e.g., 3.16+), consider creating a new container (e.g., `ubuntu28.04.def`).
+### manylinux2014 Container
 
-### Step 2: Register in `test_images.py`
-
-Add a tuple to the `PYTHON_VERSIONS` list:
-```python
-("3.X", "ubuntu24.04.sif"),
-```
-
-### Step 3: Rebuild the Container
-
+Python versions are pre-installed in the manylinux2014 Docker image at `/opt/python/`. If a new Python is available upstream, rebuild the container to pull the latest image:
 ```bash
-apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
+apptainer build --fakeroot manylinux2014.sif manylinux2014.def
 ```
 
-### Step 4: Run Full Test Suite
+The manylinux image is rebuilt regularly by the pypa/manylinux project and includes CPython 3.9+.
 
-```bash
-python3 test_images.py
-```
-
-## Add a Free-Threading (no-GIL) Build
+### Free-Threading (no-GIL) Build in Ubuntu Containers
 
 Add to the `.def` file's uv section:
 ```bash
@@ -142,6 +130,25 @@ if [ -n "$FTPYTHON" ]; then
     FTBIN=$(dirname "$FTPYTHON")
     ln -s "$FTPYTHON" /usr/local/bin/python3.Xt
 fi
+```
+
+### Register in `test_images.py`
+
+Add a tuple to the `PYTHON_VERSIONS` list:
+```python
+("3.X", "ubuntu24.04.sif"),
+```
+
+### Rebuild the Container
+
+```bash
+apptainer build --fakeroot <container>.sif <container>.def
+```
+
+### Run Full Test Suite
+
+```bash
+python3 test_images.py
 ```
 
 ## File Ownership

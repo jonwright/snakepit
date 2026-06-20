@@ -60,6 +60,7 @@ apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
 apptainer build --fakeroot debian10.sif debian10.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
+apptainer build --fakeroot manylinux2014.sif manylinux2014.def
 ```
 
 Test a Python version:
@@ -72,9 +73,10 @@ Test a Python version:
 - **debian10.sif**: Python 3.6
 - **ubuntu24.04.sif**: Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t
 - **ubuntu26.04.sif**: Python 3.15, 3.15t
+- **manylinux2014.sif**: Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
 
 ### Key Files
-- `ubuntu20.04.def` / `ubuntu24.04.def` / `ubuntu26.04.def`: Apptainer container definitions
+- `ubuntu20.04.def` / `debian10.def` / `ubuntu24.04.def` / `ubuntu26.04.def` / `manylinux2014.def`: Apptainer container definitions
 - `test_in_container.sh`: Primary test runner script
 - `test_extension/`: Example C extension with NumPy f2py
 - `test_images.py`: Automated container test suite
@@ -82,7 +84,7 @@ Test a Python version:
 
 ### Architecture
 - Apptainer definitions use fakeroot for non-root container building
-- Tests are Python 2.7-3.14 compatible (no f-strings, `from __future__ import`)
+- Tests are Python 2.7-3.15 compatible (no f-strings, `from __future__ import`)
 - Single `requirements.txt` with Python version markers handles all package versions
 
 ## Contributing Guidelines
@@ -100,7 +102,7 @@ Run all tests:
 python3 test_images.py
 ```
 
-This builds both containers and tests all Python versions. Results are logged to `test_results.log`.
+This builds all containers and tests all Python versions. Results are logged to `test_results.log`.
 
 ## Notes for LLM/AI Agents
 

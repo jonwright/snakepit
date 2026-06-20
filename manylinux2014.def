@@ -1,0 +1,33 @@
+Bootstrap: docker
+From: quay.io/pypa/manylinux2014_x86_64:latest
+
+%help
+    manylinux2014 container for testing Python C extension builds
+    Based on CentOS 7 (glibc 2.17) with CPython 3.9-3.15, 3.14t, 3.15t
+
+%labels
+    Author OpenHands
+    Version 1.0
+    BaseOS CentOS 7 (manylinux2014)
+
+%post
+    # Install gcc-gfortran for f2py support and hdf5-devel for h5py
+    yum install -y gcc-gfortran hdf5-devel
+    yum clean all
+
+    # Verify all Pythons are accessible
+    for pyversion in python3.9 python3.10 python3.11 python3.12 python3.13 \
+                     python3.14 python3.14t python3.15 python3.15t; do
+        if command -v $pyversion >/dev/null 2>&1; then
+            echo "$($pyversion --version) - [OK]"
+        else
+            echo "$pyversion - not found"
+        fi
+    done
+
+%environment
+    export LC_ALL=en_US.UTF-8
+    export LANG=en_US.UTF-8
+
+%runscript
+    exec /bin/bash "$@"

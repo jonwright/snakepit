@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-Uniform test code for all Python versions (2.7 - 3.14).
-Includes free-threading (3.14t) support.
+Uniform test code for all Python versions (2.7 - 3.15).
+Includes free-threading (3.14t, 3.15t) support.
 Tests h5py, numba, and C extension (arraysum).
 """
 from __future__ import print_function
@@ -9,7 +9,11 @@ import sys
 import os
 import tempfile
 import numpy as np
-import h5py
+try:
+    import h5py
+    HAVE_H5PY = True
+except ImportError:
+    HAVE_H5PY = False
 try:
     import numba
     HAVE_NUMBA = True
@@ -19,7 +23,10 @@ except ImportError:
 print("=" * 70)
 print("Python version: " + sys.version)
 print("NumPy version:  " + np.__version__)
-print("h5py version:   " + h5py.__version__)
+if HAVE_H5PY:
+    print("h5py version:   " + h5py.__version__)
+else:
+    print("h5py version:   N/A (not installed)")
 if HAVE_NUMBA:
     print("numba version:  " + numba.__version__)
 else:
@@ -39,24 +46,27 @@ print("=" * 70)
 
 # Test 1: h5py
 print("\n=== Testing h5py ===")
-try:
-    # Create temporary h5 file
-    fd, fname = tempfile.mkstemp(suffix=".h5")
-    os.close(fd)
-    
-    # Write data
-    with h5py.File(fname, "w") as f:
-        f.create_dataset("test", data=np.array([1, 2, 3, 4, 5]))
-    
-    # Read data
-    with h5py.File(fname, "r") as f:
-        data = f["test"][:]
-        assert list(data) == [1, 2, 3, 4, 5]
-    
-    print("h5py test PASSED: write/read HDF5 file successful")
-finally:
-    if os.path.exists(fname):
-        os.unlink(fname)
+if HAVE_H5PY:
+    try:
+        # Create temporary h5 file
+        fd, fname = tempfile.mkstemp(suffix=".h5")
+        os.close(fd)
+
+        # Write data
+        with h5py.File(fname, "w") as f:
+            f.create_dataset("test", data=np.array([1, 2, 3, 4, 5]))
+
+        # Read data
+        with h5py.File(fname, "r") as f:
+            data = f["test"][:]
+            assert list(data) == [1, 2, 3, 4, 5]
+
+        print("h5py test PASSED: write/read HDF5 file successful")
+    finally:
+        if os.path.exists(fname):
+            os.unlink(fname)
+else:
+    print("h5py test SKIPPED: h5py not available for this Python version")
 
 # Test 2: numba
 print("\n=== Testing numba ===")

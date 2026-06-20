@@ -14,9 +14,9 @@ Snakepit provides Apptainer container images for testing scientific Python C ext
 
 ## Architecture
 
-### Four-Image Strategy
+### Five-Image Strategy
 
-The project uses four images to handle different Python versions across multiple OS generations:
+The project uses five images to handle different Python versions across multiple OS generations:
 
 #### Image 1: `snakepit:u20` (Ubuntu 20.04)
 - **Python 2.7** (from Ubuntu 20.04 repos)
@@ -38,6 +38,11 @@ The project uses four images to handle different Python versions across multiple
 #### Image 4: `snakepit:u26` (Ubuntu 26.04)
 - **Python 3.15** (from deadsnakes PPA -- tracks latest beta/rc/final)
 - **Python 3.15t** (free-threading/no-GIL, from uv python-build-standalone, if available)
+
+#### Image 5: `snakepit:manylinux2014` (CentOS 7)
+- **Python 3.9-3.14** (pre-installed in manylinux2014 Docker image at `/opt/python/`)
+- Oldest glibc (2.17) for maximum binary compatibility testing
+- GCC 10 toolchain (devtoolset-10) with gfortran for f2py
 
 ### Common Components
 
@@ -70,6 +75,10 @@ apptainer exec --bind /path/to/your/project:/workspace \
 # For Python 3.15, 3.15t (Ubuntu 26.04)
 apptainer exec --bind /path/to/your/project:/workspace \
   ubuntu26.04.sif bash
+
+# For Python 3.9-3.14 (manylinux2014)
+apptainer exec --bind /path/to/your/project:/workspace \
+  manylinux2014.sif bash
 ```
 
 ### 2. Create Virtual Environment
@@ -124,6 +133,9 @@ apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 
 # Build Ubuntu 26.04 container (Python 3.15, 3.15t)
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
+
+# Build manylinux2014 container (Python 3.9-3.14)
+apptainer build --fakeroot manylinux2014.sif manylinux2014.def
 ```
 
 ### File Ownership
@@ -206,6 +218,9 @@ apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 
 # Build Ubuntu 26.04 container (Python 3.15, 3.15t)
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
+
+# Build manylinux2014 container (Python 3.9-3.14)
+apptainer build --fakeroot manylinux2014.sif manylinux2014.def
 ```
 
 The `--fakeroot` flag enables rootless builds without requiring `sudo`, making these containers suitable for HPC environments and non-root deployments.
@@ -219,15 +234,17 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
 - **Python 3.7**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
 - **Python 3.9-3.14**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa)
 - **Python 3.15**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) (resolute builds for Ubuntu 26.04)
+- **Python 3.9-3.14 (manylinux2014)**: Pre-installed in [quay.io/pypa/manylinux2014_x86_64](https://quay.io/repository/pypa/manylinux2014_x86_64) Docker image
 
-### Why Four Images?
+### Why Five Images?
 
 1. **Ubuntu 20.04** holds Python 2.7 (last LTS with official support)
 2. **Debian 10** provides Python 3.6 via official Docker image
 3. **Ubuntu 24.04** provides newer toolchains for Python 3.7-3.14
 4. **Ubuntu 26.04** provides the latest toolchain for Python 3.15+
-5. Splitting reduces individual image sizes
-6. Allows independent updates for legacy vs. modern Python ecosystems
+5. **manylinux2014** provides CentOS 7 (glibc 2.17) for maximum binary compatibility testing with GCC 10
+6. Splitting reduces individual image sizes
+7. Allows independent updates for legacy vs. modern Python ecosystems
 
 ### Virtual Environment Strategy
 
@@ -257,6 +274,8 @@ The build system uses `distutils.sysconfig.get_python_inc()` to correctly locate
 VERSIONS_U20="2.7 3.8"
 VERSIONS_DEB10="3.6"
 VERSIONS_U24="3.7 3.9 3.10 3.11 3.12 3.13 3.14 3.14t"
+VERSIONS_U26="3.15 3.15t"
+VERSIONS_MANYLINUX="3.9 3.10 3.11 3.12 3.13 3.14"
 
 # Test on u20 container
 for ver in $VERSIONS_U20; do
@@ -293,9 +312,12 @@ snakepit/
 |-- debian10.def           # Apptainer definition (Python 3.6)
 |-- ubuntu24.04.def        # Apptainer definition (Python 3.7, 3.9-3.14, 3.14t)
 |-- ubuntu26.04.def        # Apptainer definition (Python 3.15, 3.15t)
+|-- manylinux2014.def      # Apptainer definition (Python 3.9-3.14, CentOS 7)
 |-- ubuntu20.04.sif        # Built container (generated)
+|-- debian10.sif           # Built container (generated)
 |-- ubuntu24.04.sif        # Built container (generated)
 |-- ubuntu26.04.sif        # Built container (generated)
+|-- manylinux2014.sif      # Built container (generated)
 |-- AGENTS.md              # Agent instructions and quick reference
 |-- SKILL.md               # Detailed container usage guide for AI agents
 |-- specification.md       # This document
@@ -337,6 +359,13 @@ snakepit/
 - Installed from `ppa:deadsnakes/ppa` on Ubuntu 26.04
 - Feature freeze already in effect; expected stable: 2026-10-01
 - Free-threading version (`python3.15t`) installed via uv if available in python-build-standalone
+
+### manylinux2014
+- CentOS 7 base with glibc 2.17 (oldest compatible glibc)
+- All Pythons are pre-installed in `/opt/python/` from the pypa/manylinux Docker image
+- GCC 10 toolchain via devtoolset-10 with gfortran for f2py
+- h5py may not be available for some Python versions due to CentOS 7's old HDF5 (1.8.12)
+- Free-threading builds (3.14t, 3.15, 3.15t) are present in the image but not in the test matrix due to libstdc++ compatibility and wheel availability constraints
 
 ## Future Enhancements
 

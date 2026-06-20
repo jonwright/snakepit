@@ -28,7 +28,7 @@ numba ; python_version >= "3"
 **After**: Single `test_uniform.py` that runs unchanged on ALL Python versions
 - Uses `from __future__ import print_function`
 - No f-strings
-- Works identically from Python 2.7 to 3.14
+- Works identically from Python 2.7 to 3.15
 
 ### 3. Simplified Test Runner [OK]
 
@@ -67,8 +67,17 @@ All Python versions tested successfully:
 | 3.13           | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
 | 3.14           | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
 | 3.14t          | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
-| 3.15           | (pending)     | (pending)    | (pending)     | [OK] PASSED |
-| 3.15t          | (pending)     | (pending)    | (pending)     | [OK] PASSED |
+| 3.15           | 2.4.6         | 3.16.0       | N/A           | [OK] PASSED |
+| 3.15t          | 2.4.6         | 3.16.0       | N/A           | [OK] PASSED |
+| 3.9 (manylinux) | 2.0.2        | 3.14.0       | 0.60.0        | [OK] PASSED |
+| 3.10 (manylinux) | 2.2.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
+| 3.11 (manylinux) | 2.4.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
+| 3.12 (manylinux) | 2.4.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
+| 3.13 (manylinux) | 2.4.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
+| 3.14 (manylinux) | 2.4.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
+
+[1] h5py not available on manylinux2014 due to CentOS 7 HDF5 1.8.12 being too old for building from source, and no binary wheel being available.
+
 
 ## What Gets Tested
 
@@ -89,7 +98,7 @@ test_extension/
 |-- build_extension.sh  # Build script
 |-- requirements.txt    # Version-conditional dependencies
 |-- run_tests.sh        # Unified test runner
-`-- test_uniform.py     # Python 2.7-3.14 compatible test code (incl. free-threading)
+`-- test_uniform.py     # Python 2.7-3.15 compatible test code (incl. free-threading)
 ```
 
 ## Usage Examples

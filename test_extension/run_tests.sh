@@ -57,7 +57,13 @@ elif [[ "${PYTHON_CMD}" == *"t" ]]; then
     set -e
 else
     python -m pip install --upgrade pip --quiet
-    python -m pip install -r requirements.txt --quiet
+    # Install packages individually so optional ones (h5py, numba) don't
+    # block required ones (numpy) when source builds are needed
+    set +e
+    python -m pip install numpy --quiet
+    python -m pip install h5py --quiet
+    python -m pip install numba --quiet
+    set -e
 fi
 
 # Build C extension with f2py

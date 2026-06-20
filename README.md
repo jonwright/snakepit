@@ -1,6 +1,6 @@
 # Snakepit
 
-Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.15, including free-threading (3.14t, 3.15t).
+Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.15, including free-threading (3.14t, 3.15t), plus manylinux2014 for glibc 2.17 compatibility testing.
 
 ## Quick Start
 
@@ -11,6 +11,7 @@ apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
 apptainer build --fakeroot debian10.sif debian10.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
+apptainer build --fakeroot manylinux2014.sif manylinux2014.def
 ```
 
 No `sudo` required - uses Apptainer's fakeroot capability.
@@ -36,18 +37,20 @@ apptainer exec --bind $(pwd):/workspace ubuntu24.04.sif bash
 
 # Interactive shell for Python 3.15, 3.15t (Ubuntu 26.04)
 apptainer exec --bind $(pwd):/workspace ubuntu26.04.sif bash
+
+# Interactive shell for Python 3.9-3.14 (manylinux2014)
+apptainer exec --bind $(pwd):/workspace manylinux2014.sif bash
 ```
 
 ## Supported Python Versions
 
 | Container | Python Versions |
 |-----------|----------------|
-| Container | Python Versions |
-|-----------|----------------|
 | `ubuntu20.04.sif` | 2.7, 3.8 |
 | `debian10.sif` | 3.6 |
 | `ubuntu24.04.sif` | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t |
 | `ubuntu26.04.sif` | 3.15, 3.15t |
+| `manylinux2014.sif` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 |
 
 ## Features
 
