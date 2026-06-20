@@ -27,7 +27,11 @@ if [[ "${PYTHON_CMD}" == *"2.7"* ]]; then
 elif [[ "${PYTHON_CMD}" == *"t" ]]; then
     # Free-threading Python: use uv for venv and pip
     export PATH="/root/.local/bin:$PATH"
-    uv venv --python ${PYTHON_CMD} ${VENV_DIR}
+    if [[ "${MODE}" == "preinstalled" ]]; then
+        uv venv --python ${PYTHON_CMD} --system-site-packages ${VENV_DIR}
+    else
+        uv venv --python ${PYTHON_CMD} ${VENV_DIR}
+    fi
     source ${VENV_DIR}/bin/activate
 elif [[ "${MODE}" == "preinstalled" ]]; then
     # Use system-site-packages to access pre-installed numpy/h5py/numba
@@ -44,8 +48,13 @@ echo "Installing packages from requirements.txt..."
 if [[ "${MODE}" == "preinstalled" ]]; then
     echo "Using pre-installed system packages (no pip install needed)"
 elif [[ "${PYTHON_CMD}" == *"t" ]]; then
-    # uv-managed Python: use uv pip install (no ensurepip in python-build-standalone)
-    uv pip install -r requirements.txt --quiet
+    # uv-managed Python: install packages individually so optional ones don't
+    # block required ones (e.g. numba may not support pre-release Python versions)
+    set +e
+    uv pip install numpy --quiet
+    uv pip install h5py --quiet
+    uv pip install numba --quiet
+    set -e
 else
     python -m pip install --upgrade pip --quiet
     python -m pip install -r requirements.txt --quiet

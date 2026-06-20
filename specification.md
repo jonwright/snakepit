@@ -67,7 +67,7 @@ apptainer exec --bind /path/to/your/project:/workspace \
 apptainer exec --bind /path/to/your/project:/workspace \
   ubuntu24.04.sif bash
 
-# For Python 3.15 (Ubuntu 26.04)
+# For Python 3.15, 3.15t (Ubuntu 26.04)
 apptainer exec --bind /path/to/your/project:/workspace \
   ubuntu26.04.sif bash
 ```
@@ -122,7 +122,7 @@ apptainer build --fakeroot debian10.sif debian10.def
 # Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14, 3.14t)
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 
-# Build Ubuntu 26.04 container (Python 3.15)
+# Build Ubuntu 26.04 container (Python 3.15, 3.15t)
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
 ```
 
@@ -204,7 +204,7 @@ apptainer build --fakeroot debian10.sif debian10.def
 # Build Ubuntu 24.04 container (Python 3.7, 3.9-3.14, 3.14t)
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 
-# Build Ubuntu 26.04 container (Python 3.15)
+# Build Ubuntu 26.04 container (Python 3.15, 3.15t)
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
 ```
 

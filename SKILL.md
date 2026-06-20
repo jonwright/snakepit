@@ -19,7 +19,7 @@ This guide teaches you (an LLM/AI agent) how to use these containers effectively
 | `ubuntu20.04.sif` | Ubuntu 20.04 | 2.7, 3.8 | Ubuntu repos |
 | `debian10.sif` | Debian 10 (Buster) | 3.6 | Official `python:3.6.15-buster` Docker image |
 | `ubuntu24.04.sif` | Ubuntu 24.04 | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t | deadsnakes PPA + uv (free-threading) |
-| `ubuntu26.04.sif` | Ubuntu 26.04 | 3.15 | deadsnakes PPA + uv (free-threading) |
+| `ubuntu26.04.sif` | Ubuntu 26.04 | 3.15, 3.15t | deadsnakes PPA + uv (free-threading) |
 
 ## Building Containers
 

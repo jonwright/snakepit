@@ -32,6 +32,7 @@ PYTHON_VERSIONS = [
     ("3.14", "ubuntu24.04.sif"),
     ("3.14t", "ubuntu24.04.sif"),
     ("3.15", "ubuntu26.04.sif"),
+    ("3.15t", "ubuntu26.04.sif"),
 ]
 
 

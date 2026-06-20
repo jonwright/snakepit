@@ -36,7 +36,10 @@ From: ubuntu:26.04
     export PATH="/root/.local/bin:$PATH"
 
     # Try to install Python 3.15 free-threading via uv (python-build-standalone)
+    # Chain through possible version strings (release, beta, etc.)
     uv python install cpython-3.15.0+freethreaded-linux-x86_64-gnu || \
+        uv python install cpython-3.15.0b2+freethreaded-linux-x86_64-gnu || \
+        uv python install cpython-3.15.0b1+freethreaded-linux-x86_64-gnu || \
         echo "Python 3.15 free-threading not yet available via uv"
 
     # Symlink free-threaded Python if installed
@@ -70,6 +73,18 @@ From: ubuntu:26.04
         numba --quiet && \
         echo "numba pre-installed successfully" || \
         echo "numba pre-install not available (no wheel for 3.15)"
+
+    # Pre-install numpy/h5py for 3.15t (free-threading) if installed
+    if [ -n "$FTPYTHON" ]; then
+        uv pip install --python python3.15t --system --break-system-packages \
+            numpy --quiet && \
+            echo "numpy pre-installed for 3.15t" || \
+            echo "numpy pre-install for 3.15t failed"
+        uv pip install --python python3.15t --system --break-system-packages \
+            h5py --quiet && \
+            echo "h5py pre-installed for 3.15t" || \
+            echo "h5py pre-install for 3.15t failed (no wheel)"
+    fi
 
     # Clean up temporary venv
     rm -rf /tmp/py315_venv
