@@ -108,6 +108,9 @@ Test a Python version:
 - **ubuntu20.04_ppc64le.sif**: Python 3.11 (Power9 / ppc64le, QEMU build)
 - **ubuntu24.04_aarch64.sif**: Python 3.11 (ARM64 / aarch64, QEMU build)
 
+**Note: Python 3.16** beta is expected May 2027. It will likely require a new ubuntu28.04
+container definition (tracking deadsnakes PPA) or a standalone uv-based install.
+
 ### Key Files
 - `ubuntu20.04.def` / `debian10.def` / `ubuntu24.04.def` / `ubuntu26.04.def` / `manylinux2014.def`: Apptainer container definitions
 - `ubuntu20.04_ppc64le.def` / `ubuntu24.04_aarch64.def`: Cross-architecture definitions (QEMU)

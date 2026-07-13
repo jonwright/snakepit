@@ -38,6 +38,8 @@ From: ubuntu:26.04
     # Try to install Python 3.15 free-threading via uv (python-build-standalone)
     # Chain through possible version strings (release, beta, etc.)
     uv python install cpython-3.15.0+freethreaded-linux-x86_64-gnu || \
+        uv python install cpython-3.15.0rc1+freethreaded-linux-x86_64-gnu || \
+        uv python install cpython-3.15.0b3+freethreaded-linux-x86_64-gnu || \
         uv python install cpython-3.15.0b2+freethreaded-linux-x86_64-gnu || \
         uv python install cpython-3.15.0b1+freethreaded-linux-x86_64-gnu || \
         echo "Python 3.15 free-threading not yet available via uv"

@@ -42,3 +42,14 @@ container's system Python.  This works but is not clean.
   cannot use venvs for free-threaded Python testing.
 - Any downstream project that tests with c2py23 on FT has the same limitation.
 - Not a blocker, but a CI hygiene concern.
+
+### Current status
+
+The `uv venv` workaround (option 2 above) is operational in snakepit's
+test runners. `run_tests.sh` detects free-threading builds (`*t`) and uses
+`uv venv --python python3.Xt` instead of `python3.Xt -m venv`. This produces
+working venvs for 3.14t and 3.15t.
+
+Native `python3.Xt -m venv` support depends on upstream uv/python-build-standalone
+fixing the stdlib path resolution for freethreaded installs. Until that is resolved,
+the `uv venv` path is the recommended approach.
