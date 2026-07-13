@@ -54,6 +54,8 @@ Snakepit is a multi-Python Apptainer container testing suite for scientific Pyth
 
 ### Quick Commands
 
+### Native (x86_64) Containers
+
 Build containers (no sudo required - uses fakeroot):
 ```bash
 apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
@@ -62,6 +64,35 @@ apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
 apptainer build --fakeroot manylinux2014.sif manylinux2014.def
 ```
+
+### Cross-Architecture Containers (ppc64le / aarch64)
+
+Builds foreign-architecture containers using QEMU user-mode emulation.
+Requires `qemu-user-static` on the build host.
+
+**Sysadmin setup** (one-time):
+```bash
+# Debian/Ubuntu host:
+sudo apt-get install -y qemu-user-static
+
+# RHEL/CentOS/Fedora host:
+sudo dnf install -y qemu-user-static
+
+# Verify binfmt_misc handlers are registered:
+ls /proc/sys/fs/binfmt_misc/ | grep qemu
+# Should show: qemu-aarch64  qemu-ppc64le  (among others)
+```
+
+**Build commands** (the --arch flag tells Apptainer which Docker image variant to pull):
+```bash
+apptainer build --fakeroot --arch ppc64le ubuntu20.04_ppc64le.sif ubuntu20.04_ppc64le.def
+apptainer build --fakeroot --arch arm64 ubuntu24.04_aarch64.sif ubuntu24.04_aarch64.def
+```
+
+**How it works**: QEMU user-mode + kernel binfmt_misc handlers translate foreign
+architecture binaries transparently. Apptainer's `--arch` flag selects the matching
+Docker image variant. Both build-time (%post scripts) and runtime (`apptainer exec`)
+are emulated -- no native hardware required.
 
 Test a Python version:
 ```bash
@@ -74,9 +105,12 @@ Test a Python version:
 - **ubuntu24.04.sif**: Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t
 - **ubuntu26.04.sif**: Python 3.15, 3.15t
 - **manylinux2014.sif**: Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+- **ubuntu20.04_ppc64le.sif**: Python 3.11 (Power9 / ppc64le, QEMU build)
+- **ubuntu24.04_aarch64.sif**: Python 3.11 (ARM64 / aarch64, QEMU build)
 
 ### Key Files
 - `ubuntu20.04.def` / `debian10.def` / `ubuntu24.04.def` / `ubuntu26.04.def` / `manylinux2014.def`: Apptainer container definitions
+- `ubuntu20.04_ppc64le.def` / `ubuntu24.04_aarch64.def`: Cross-architecture definitions (QEMU)
 - `test_in_container.sh`: Primary test runner script
 - `test_extension/`: Example C extension with NumPy f2py
 - `test_images.py`: Automated container test suite

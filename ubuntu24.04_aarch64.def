@@ -1,0 +1,38 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%help
+    Ubuntu 24.04 container (aarch64) with Python 3.11 for ARM64 testing
+
+%labels
+    Author Snakepit
+    Version 1.0
+    BaseOS Ubuntu 24.04
+    Architecture aarch64
+    Target Pinebook Pro / ARM64
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update && apt-get install -y \
+        git \
+        build-essential \
+        software-properties-common \
+        curl \
+        && rm -rf /var/lib/apt/lists/*
+
+    add-apt-repository ppa:deadsnakes/ppa -y
+
+    apt-get update && apt-get install -y \
+        python3.11 python3.11-dev python3.11-venv \
+        python3-pip \
+        && rm -rf /var/lib/apt/lists/*
+
+    python3.11 --version && \
+        python3.11 -m pip --version
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+
+%runscript
+    exec /bin/bash "$@"

@@ -41,6 +41,9 @@ PYTHON_VERSIONS = [
     ("3.12", "manylinux2014.sif"),
     ("3.13", "manylinux2014.sif"),
     ("3.14", "manylinux2014.sif"),
+    # Cross-architecture containers (QEMU user-mode emulation required for build/test)
+    ("3.11", "ubuntu20.04_ppc64le.sif"),
+    ("3.11", "ubuntu24.04_aarch64.sif"),
 ]
 
 

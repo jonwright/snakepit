@@ -1,0 +1,45 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%help
+    Ubuntu 20.04 container (ppc64le) with Python 3.11 for Power9 testing
+
+%labels
+    Author Snakepit
+    Version 1.0
+    BaseOS Ubuntu 20.04
+    Architecture ppc64le
+    Target Power9
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update && apt-get install -y \
+        git \
+        build-essential \
+        curl \
+        && rm -rf /var/lib/apt/lists/*
+
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="/root/.local/bin:$PATH"
+
+    uv python install 3.11
+
+    PYPATH=$(uv python find 3.11 2>/dev/null | head -1)
+    if [ -n "$PYPATH" ]; then
+        ln -s "$PYPATH" /usr/local/bin/python3.11
+        PYBIN=$(dirname "$PYPATH")
+        if [ -f "$PYBIN/pip3" ]; then
+            ln -s "$PYBIN/pip3" /usr/local/bin/pip3.11
+        fi
+    fi
+
+    python3.11 --version && \
+        python3.11 -m pip --version
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export PATH="/root/.local/bin:$PATH"
+
+%runscript
+    exec /bin/bash "$@"
