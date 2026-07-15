@@ -21,7 +21,7 @@ This guide teaches you (an LLM/AI agent) how to use these containers effectively
 | `ubuntu24.04.sif` | Ubuntu 24.04 | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t | deadsnakes PPA + uv (free-threading) |
 | `ubuntu26.04.sif` | Ubuntu 26.04 | 3.15, 3.15t | deadsnakes PPA + uv (free-threading) |
 | `manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 | manylinux2014 image (GCC 10, auditwheel, uv) |
-| `ubuntu24.04_pypy.sif` | Ubuntu 24.04 | PyPy 2.7, 3.9, 3.11 | apt + uv + pypy.org portable tarball |
+| `ubuntu24.04_pypy.sif` | Ubuntu 24.04 | PyPy 2.7, 3.9, 3.11 | uv + pypy.org portable tarball |
 
 ## Building Containers
 
@@ -81,22 +81,31 @@ source /workspace/venv_py27/bin/activate
 
 ### 5. PyPy (2.7, 3.9, 3.11)
 
-PyPy also uses `virtualenv` (not `venv`). Bootstrap pip with `ensurepip`:
+PyPy does not have the `venv` module. Use `virtualenv` for PyPy 2.7,
+`uv venv` for PyPy 3.9/3.11:
+
 ```bash
-pypy3 -m ensurepip
-pypy3 -m pip install virtualenv
-pypy3 -m virtualenv /workspace/venv_pypy
-source /workspace/venv_pypy/bin/activate
+# PyPy 2.7
+pypy -m ensurepip
+pypy -m pip install virtualenv
+pypy -m virtualenv /workspace/venv_pypy27
+source /workspace/venv_pypy27/bin/activate
+
+# PyPy 3.9 or 3.11 (uv-managed; uv is pre-installed in the container)
+uv venv --python pypy3.9 /workspace/venv_pypy39
+source /workspace/venv_pypy39/bin/activate
 ```
 
 Dev headers are at PyPy-specific include paths. Use `sysconfig`:
 ```bash
-pypy3 -c "import sysconfig; print(sysconfig.get_path('include'))"
+pypy3.9 -c "import sysconfig; print(sysconfig.get_path('include'))"
 ```
 
 The PyPy shared library for cpyext (`libpypy3.X-c.so`) lives alongside the
 PyPy binary. Symbol names are prefixed with `PyPy_` (e.g., `PyPyLong_Type`
 instead of `PyLong_Type`).
+
+Extensions may need the `.pypy-73.so` suffix (check `sysconfig.get_config_var('SO')`).
 
 ## Testing Your Changes
 

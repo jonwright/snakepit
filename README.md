@@ -1,6 +1,6 @@
 # Snakepit
 
-Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.15, including free-threading (3.14t, 3.15t), plus manylinux2014 for glibc 2.17 compatibility testing.
+Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.15, including free-threading (3.14t, 3.15t), PyPy (2.7, 3.9, 3.11), plus manylinux2014 for glibc 2.17 compatibility testing.
 
 ## Quick Start
 
@@ -12,6 +12,7 @@ apptainer build --fakeroot debian10.sif debian10.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
 apptainer build --fakeroot manylinux2014.sif manylinux2014.def
+apptainer build --fakeroot ubuntu24.04_pypy.sif ubuntu24.04_pypy.def
 ```
 
 No `sudo` required - uses Apptainer's fakeroot capability.
@@ -21,6 +22,7 @@ No `sudo` required - uses Apptainer's fakeroot capability.
 ```bash
 ./test_in_container.sh python3.14 ubuntu24.04.sif
 ./test_in_container.sh python2.7 ubuntu20.04.sif
+./test_in_container.sh pypy3.9 ubuntu24.04_pypy.sif
 ```
 
 ### Use Containers
@@ -40,6 +42,9 @@ apptainer exec --bind $(pwd):/workspace ubuntu26.04.sif bash
 
 # Interactive shell for Python 3.9-3.14 (manylinux2014)
 apptainer exec --bind $(pwd):/workspace manylinux2014.sif bash
+
+# Interactive shell for PyPy 2.7, 3.9, 3.11
+apptainer exec --bind $(pwd):/workspace ubuntu24.04_pypy.sif bash
 ```
 
 ## Supported Python Versions
@@ -51,6 +56,10 @@ apptainer exec --bind $(pwd):/workspace manylinux2014.sif bash
 | `ubuntu24.04.sif` | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t |
 | `ubuntu26.04.sif` | 3.15, 3.15t |
 | `manylinux2014.sif` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 |
+| `ubuntu24.04_pypy.sif` | PyPy 2.7, 3.9, 3.11 |
+
+PyPy binaries are at `/usr/local/bin/{pypy,pypy2.7,pypy3,pypy3.9,pypy3.11}`.
+PyPy 2.7 uses `virtualenv`, PyPy 3.9/3.11 use `uv venv` for isolated environments.
 
 ## Features
 
@@ -104,6 +113,9 @@ A simple C extension test case is provided in `test_extension/` directory.
 
 # Test Python 2.7
 ./test_in_container.sh python2.7 ubuntu20.04.sif
+
+# Test PyPy 3.9
+./test_in_container.sh pypy3.9 ubuntu24.04_pypy.sif
 ```
 
 All tests validate NumPy, h5py, numba, and C extension compilation/execution.
