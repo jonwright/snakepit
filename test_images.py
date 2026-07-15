@@ -45,7 +45,7 @@ PYTHON_VERSIONS = [
     ("3.11", "ubuntu20.04_ppc64le.sif"),
     ("3.11", "ubuntu24.04_aarch64.sif"),
     # PyPy containers (cpython-compatible cpyext ABI testing)
-    ("pypy", "ubuntu24.04_pypy.sif"),
+    ("pypy2.7", "ubuntu24.04_pypy.sif"),
     ("pypy3.9", "ubuntu24.04_pypy.sif"),
     ("pypy3.11", "ubuntu24.04_pypy.sif"),
 ]

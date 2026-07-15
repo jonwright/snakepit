@@ -17,8 +17,19 @@ if [ ! -f "$PYTHON_INC/Python.h" ]; then
     fi
 fi
 
+# PyPy venvs may not inherit the base include path; use base_prefix
+if [ ! -f "$PYTHON_INC/Python.h" ]; then
+    BASE_INC=$($PYTHON -c "import sys, os; print(os.path.join(sys.base_prefix, 'include'))" 2>/dev/null || true)
+    if [ -n "$BASE_INC" ] && [ -f "$BASE_INC/Python.h" ]; then
+        PYTHON_INC="$BASE_INC"
+    fi
+fi
+
 # Generate wrapper
 $PYTHON -m numpy.f2py arraysum.pyf
+
+# Determine the correct extension suffix for this Python
+EXT_SUFFIX=$($PYTHON -c "import sysconfig; print(sysconfig.get_config_var('SO') or '.so')")
 
 # Compile
 gcc -shared -fPIC \
@@ -26,6 +37,6 @@ gcc -shared -fPIC \
     -I"$NUMPY_INC" \
     -I"$F2PY_SRC" \
     arraysummodule.c arraysum.c "$F2PY_SRC/fortranobject.c" \
-    -o arraysum.so
+    -o "arraysum${EXT_SUFFIX}"
 
-echo "Built arraysum.so for $PYTHON"
+echo "Built arraysum${EXT_SUFFIX} for $PYTHON"

@@ -21,8 +21,12 @@ echo "========================================================================"
 rm -rf ${VENV_DIR}
 
 # Create virtual environment
-if [[ "${PYTHON_CMD}" == pypy* ]]; then
+if [[ "${PYTHON_CMD}" == pypy2* ]]; then
     ${PYTHON_CMD} -m virtualenv ${VENV_DIR}
+    source ${VENV_DIR}/bin/activate
+elif [[ "${PYTHON_CMD}" == pypy3* ]]; then
+    export PATH="/root/.local/bin:$PATH"
+    uv venv --python ${PYTHON_CMD} ${VENV_DIR}
     source ${VENV_DIR}/bin/activate
 elif [[ "${PYTHON_CMD}" == *"2.7"* ]]; then
     ${PYTHON_CMD} -m virtualenv ${VENV_DIR}
@@ -53,6 +57,12 @@ if [[ "${MODE}" == "preinstalled" ]]; then
 elif [[ "${PYTHON_CMD}" == *"t" ]]; then
     # uv-managed Python: install packages individually so optional ones don't
     # block required ones (e.g. numba may not support pre-release Python versions)
+    set +e
+    uv pip install numpy --quiet
+    uv pip install h5py --quiet
+    uv pip install numba --quiet
+    set -e
+elif [[ "${PYTHON_CMD}" == pypy3* ]]; then
     set +e
     uv pip install numpy --quiet
     uv pip install h5py --quiet

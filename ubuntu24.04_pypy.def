@@ -18,26 +18,26 @@ From: ubuntu:24.04
         curl \
         && rm -rf /var/lib/apt/lists/*
 
-    # PyPy 3.9 from Ubuntu repos (Noble ships PyPy 7.3.15 targeting Python 3.9)
-    apt-get update && apt-get install -y pypy3 pypy3-dev \
-        && rm -rf /var/lib/apt/lists/*
-    ln -sf /usr/bin/pypy3 /usr/local/bin/pypy3.9
-
-    # Bootstrap pip for apt-installed pypy3
-    pypy3 -m ensurepip || true
-    pypy3 -m pip install --upgrade pip --quiet || true
-
-    # PyPy 3.11 via uv (tracks latest available build)
+    # Install uv for PyPy version management
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="/root/.local/bin:$PATH"
+    export LC_ALL=C.UTF-8
+
+    # PyPy 3.9 via uv
+    uv python install pypy3.9 || \
+        echo "PyPy 3.9 not available via uv"
+    PYPY39=$(uv python find pypy3.9 2>/dev/null || true)
+    if [ -n "$PYPY39" ]; then
+        ln -sf "$PYPY39" /usr/local/bin/pypy3.9
+        ln -sf "$PYPY39" /usr/local/bin/pypy3
+    fi
+
+    # PyPy 3.11 via uv (tracks latest available build)
     uv python install pypy3.11 || \
         echo "PyPy 3.11 not available via uv"
-
     PYPY311=$(uv python find pypy3.11 2>/dev/null || true)
     if [ -n "$PYPY311" ]; then
-        PYPY311BIN=$(dirname "$PYPY311")
         ln -sf "$PYPY311" /usr/local/bin/pypy3.11
-        ln -sf "$PYPY311BIN"/pip* /usr/local/bin/ 2>/dev/null || true
     fi
 
     # PyPy 2.7 via portable tarball (v7.3.17 is the final PyPy2.7 release)
@@ -62,12 +62,13 @@ From: ubuntu:24.04
     echo "---"
     pypy --version
     pypy3 --version
-    (pypy3.11 --version || echo "PyPy 3.11 not installed")
+    pypy3.11 --version || echo "PyPy 3.11 not installed"
     echo "---"
 
 %environment
     export DEBIAN_FRONTEND=noninteractive
     export PATH="/root/.local/bin:$PATH"
+    export LC_ALL=C.UTF-8
 
 %runscript
     exec /bin/bash "$@"
