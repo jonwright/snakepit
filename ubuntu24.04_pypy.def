@@ -1,0 +1,73 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%help
+    Ubuntu 24.04 container with PyPy 2.7, 3.9, and 3.11 for cpyext testing
+
+%labels
+    Author Snakepit
+    Version 1.0
+    BaseOS Ubuntu 24.04
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt-get update && apt-get install -y \
+        git \
+        build-essential \
+        curl \
+        && rm -rf /var/lib/apt/lists/*
+
+    # PyPy 3.9 from Ubuntu repos (Noble ships PyPy 7.3.15 targeting Python 3.9)
+    apt-get update && apt-get install -y pypy3 pypy3-dev \
+        && rm -rf /var/lib/apt/lists/*
+    ln -sf /usr/bin/pypy3 /usr/local/bin/pypy3.9
+
+    # Bootstrap pip for apt-installed pypy3
+    pypy3 -m ensurepip || true
+    pypy3 -m pip install --upgrade pip --quiet || true
+
+    # PyPy 3.11 via uv (tracks latest available build)
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="/root/.local/bin:$PATH"
+    uv python install pypy3.11 || \
+        echo "PyPy 3.11 not available via uv"
+
+    PYPY311=$(uv python find pypy3.11 2>/dev/null || true)
+    if [ -n "$PYPY311" ]; then
+        PYPY311BIN=$(dirname "$PYPY311")
+        ln -sf "$PYPY311" /usr/local/bin/pypy3.11
+        ln -sf "$PYPY311BIN"/pip* /usr/local/bin/ 2>/dev/null || true
+    fi
+
+    # PyPy 2.7 via portable tarball (v7.3.17 is the final PyPy2.7 release)
+    PYPY27_VERSION="7.3.17"
+    PYPY27_URL="https://downloads.python.org/pypy/pypy2.7-v${PYPY27_VERSION}-linux64.tar.bz2"
+    curl -L "$PYPY27_URL" -o /tmp/pypy27.tar.bz2 && \
+        mkdir -p /opt && \
+        tar -C /opt -xjf /tmp/pypy27.tar.bz2 && \
+        rm /tmp/pypy27.tar.bz2 && \
+        ln -sf /opt/pypy2.7-v${PYPY27_VERSION}-linux64/bin/pypy /usr/local/bin/pypy && \
+        ln -sf /opt/pypy2.7-v${PYPY27_VERSION}-linux64/bin/pypy /usr/local/bin/pypy2.7 && \
+        ln -sf /opt/pypy2.7-v${PYPY27_VERSION}-linux64/include /usr/local/include/pypy2.7 && \
+        echo "PyPy 2.7 v${PYPY27_VERSION} installed" || \
+        echo "ERROR: PyPy 2.7 download/extract failed"
+
+    # Bootstrap pip and virtualenv for pypy 2.7
+    pypy -m ensurepip || true
+    pypy -m pip install --upgrade pip --quiet || true
+    pypy -m pip install virtualenv --quiet || true
+
+    # Verify all PyPy versions
+    echo "---"
+    pypy --version
+    pypy3 --version
+    (pypy3.11 --version || echo "PyPy 3.11 not installed")
+    echo "---"
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export PATH="/root/.local/bin:$PATH"
+
+%runscript
+    exec /bin/bash "$@"

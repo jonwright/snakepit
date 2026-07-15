@@ -44,6 +44,10 @@ PYTHON_VERSIONS = [
     # Cross-architecture containers (QEMU user-mode emulation required for build/test)
     ("3.11", "ubuntu20.04_ppc64le.sif"),
     ("3.11", "ubuntu24.04_aarch64.sif"),
+    # PyPy containers (cpython-compatible cpyext ABI testing)
+    ("pypy", "ubuntu24.04_pypy.sif"),
+    ("pypy3.9", "ubuntu24.04_pypy.sif"),
+    ("pypy3.11", "ubuntu24.04_pypy.sif"),
 ]
 
 
@@ -135,7 +139,10 @@ def test_python_version(python_version, sif_file):
     """
     print_header("Testing Python " + python_version)
     
-    system_py = "python" + python_version
+    if python_version.startswith("python") or python_version.startswith("pypy"):
+        system_py = python_version
+    else:
+        system_py = "python" + python_version
     
     # Single command to run all tests
     print_step("Running unified test with " + system_py)

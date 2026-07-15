@@ -63,6 +63,7 @@ apptainer build --fakeroot debian10.sif debian10.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
 apptainer build --fakeroot manylinux2014.sif manylinux2014.def
+apptainer build --fakeroot ubuntu24.04_pypy.sif ubuntu24.04_pypy.def
 ```
 
 ### Cross-Architecture Containers (ppc64le / aarch64)
@@ -105,6 +106,7 @@ Test a Python version:
 - **ubuntu24.04.sif**: Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t
 - **ubuntu26.04.sif**: Python 3.15, 3.15t
 - **manylinux2014.sif**: Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
+- **ubuntu24.04_pypy.sif**: PyPy 2.7, 3.9, 3.11
 - **ubuntu20.04_ppc64le.sif**: Python 3.11 (Power9 / ppc64le, QEMU build)
 - **ubuntu24.04_aarch64.sif**: Python 3.11 (ARM64 / aarch64, QEMU build)
 
@@ -112,7 +114,7 @@ Test a Python version:
 container definition (tracking deadsnakes PPA) or a standalone uv-based install.
 
 ### Key Files
-- `ubuntu20.04.def` / `debian10.def` / `ubuntu24.04.def` / `ubuntu26.04.def` / `manylinux2014.def`: Apptainer container definitions
+- `ubuntu20.04.def` / `debian10.def` / `ubuntu24.04.def` / `ubuntu26.04.def` / `manylinux2014.def` / `ubuntu24.04_pypy.def`: Apptainer container definitions
 - `ubuntu20.04_ppc64le.def` / `ubuntu24.04_aarch64.def`: Cross-architecture definitions (QEMU)
 - `test_in_container.sh`: Primary test runner script
 - `test_extension/`: Example C extension with NumPy f2py
@@ -148,6 +150,7 @@ This builds all containers and tests all Python versions. Results are logged to 
 - Test code should work identically across Python 2.7-3.15
 - Use `from __future__ import print_function` for Python 2.7 compatibility
 - No f-strings in any Python code that must support Python 2.7
+- PyPy uses `virtualenv` (not `venv`); `ensurepip` bootstraps pip on PyPy
 - See `SKILL.md` for a detailed walkthrough of using these containers, including build commands, testing, and adding new Python versions.
 
 ## Container Usage Quick Reference

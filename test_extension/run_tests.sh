@@ -21,7 +21,10 @@ echo "========================================================================"
 rm -rf ${VENV_DIR}
 
 # Create virtual environment
-if [[ "${PYTHON_CMD}" == *"2.7"* ]]; then
+if [[ "${PYTHON_CMD}" == pypy* ]]; then
+    ${PYTHON_CMD} -m virtualenv ${VENV_DIR}
+    source ${VENV_DIR}/bin/activate
+elif [[ "${PYTHON_CMD}" == *"2.7"* ]]; then
     ${PYTHON_CMD} -m virtualenv ${VENV_DIR}
     source ${VENV_DIR}/bin/activate
 elif [[ "${PYTHON_CMD}" == *"t" ]]; then

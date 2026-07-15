@@ -21,6 +21,7 @@ This guide teaches you (an LLM/AI agent) how to use these containers effectively
 | `ubuntu24.04.sif` | Ubuntu 24.04 | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t | deadsnakes PPA + uv (free-threading) |
 | `ubuntu26.04.sif` | Ubuntu 26.04 | 3.15, 3.15t | deadsnakes PPA + uv (free-threading) |
 | `manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 | manylinux2014 image (GCC 10, auditwheel, uv) |
+| `ubuntu24.04_pypy.sif` | Ubuntu 24.04 | PyPy 2.7, 3.9, 3.11 | apt + uv + pypy.org portable tarball |
 
 ## Building Containers
 
@@ -32,6 +33,7 @@ apptainer build --fakeroot debian10.sif debian10.def
 apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
 apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
 apptainer build --fakeroot manylinux2014.sif manylinux2014.def
+apptainer build --fakeroot ubuntu24.04_pypy.sif ubuntu24.04_pypy.def
 ```
 
 **Note**: First build downloads the base Docker image (1-2 GB). Subsequent builds are fast.
@@ -76,6 +78,25 @@ Python 2.7 uses `virtualenv` instead of `venv`:
 python2.7 -m virtualenv /workspace/venv_py27
 source /workspace/venv_py27/bin/activate
 ```
+
+### 5. PyPy (2.7, 3.9, 3.11)
+
+PyPy also uses `virtualenv` (not `venv`). Bootstrap pip with `ensurepip`:
+```bash
+pypy3 -m ensurepip
+pypy3 -m pip install virtualenv
+pypy3 -m virtualenv /workspace/venv_pypy
+source /workspace/venv_pypy/bin/activate
+```
+
+Dev headers are at PyPy-specific include paths. Use `sysconfig`:
+```bash
+pypy3 -c "import sysconfig; print(sysconfig.get_path('include'))"
+```
+
+The PyPy shared library for cpyext (`libpypy3.X-c.so`) lives alongside the
+PyPy binary. Symbol names are prefixed with `PyPy_` (e.g., `PyPyLong_Type`
+instead of `PyLong_Type`).
 
 ## Testing Your Changes
 
