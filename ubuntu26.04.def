@@ -27,8 +27,15 @@ From: ubuntu:26.04
     # Install Python 3.15 with dev headers and venv
     apt-get update && apt-get install -y \
         python3.15 python3.15-dev python3.15-venv \
-        python3-pip \
         && rm -rf /var/lib/apt/lists/*
+
+    # Fix pip incompatibility with Python 3.15
+    # The deadsnakes PPA ships pip 25.1.1 which references
+    # typing.no_type_check_decorator (removed in Python 3.15).
+    # Remove the broken system pip and install a compatible one.
+    rm -rf /usr/lib/python3/dist-packages/pip /usr/lib/python3/dist-packages/pip-*
+    python3.15 -m ensurepip --default-pip
+    python3.15 -m pip install --upgrade pip --quiet
 
     # Install uv for managing Python versions (including free-threading builds)
     # uv is a standalone Python version manager from Astral
