@@ -37,6 +37,12 @@ From: ubuntu:26.04
     python3.15 -m ensurepip --default-pip
     python3.15 -m pip install --upgrade pip --quiet
 
+    # Upgrade system setuptools (apt ships 78.1.1, which cannot handle
+    # pyproject.toml dynamic fields; fixed in setuptools >= 80)
+    python3.15 -m pip install --break-system-packages \
+        -t /usr/lib/python3/dist-packages \
+        -U setuptools --quiet
+
     # Install uv for managing Python versions (including free-threading builds)
     # uv is a standalone Python version manager from Astral
     curl -LsSf https://astral.sh/uv/install.sh | sh
