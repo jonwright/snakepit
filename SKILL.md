@@ -16,24 +16,25 @@ This guide teaches you (an LLM/AI agent) how to use these containers effectively
 
 | Image File | Base OS | Python Versions | Where They Come From |
 |------------|---------|-----------------|---------------------|
-| `ubuntu20.04.sif` | Ubuntu 20.04 | 2.7, 3.8 | Ubuntu repos |
-| `debian10.sif` | Debian 10 (Buster) | 3.6 | Official `python:3.6.15-buster` Docker image |
-| `ubuntu24.04.sif` | Ubuntu 24.04 | 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t | deadsnakes PPA + uv (free-threading) |
-| `ubuntu26.04.sif` | Ubuntu 26.04 | 3.15, 3.15t | deadsnakes PPA + uv (free-threading) |
-| `manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 | manylinux2014 image (GCC 10, auditwheel, uv) |
-| `ubuntu24.04_pypy.sif` | Ubuntu 24.04 | PyPy 2.7, 3.9, 3.11 | uv + pypy.org portable tarball |
+| `snakepit-legacy.sif` | Ubuntu 18.04 (Bionic) | 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 | native apt (2.7/3.6/3.7) + uv (3.8, PyPy 3.9) + pypy.org tarball (PyPy 2.7) |
+| `snakepit-manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11, PyPy 3.11 (tested) | manylinux2014 image (GCC 10). Also ships 3.12-3.15/3.14t/3.15t interpreters, but those aren't tested -- see note below |
+| `snakepit-modern.sif` | Ubuntu 24.04 | 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | native apt (3.12) + deadsnakes PPA (3.13-3.15) + uv (3.14t, 3.15t) |
+
+**Why manylinux2014 stops at 3.11 for real testing**: numpy no longer
+publishes `manylinux2014`-tagged wheels for cp312+ (its own wheel baseline
+moved to `manylinux_2_28`), and this CentOS 7 image's GCC 10.2 can't build
+numpy from source either (numpy's meson build requires GCC >= 10.3, and no
+newer devtoolset was ever published for CentOS 7's SCL repo). `snakepit-modern.sif`'s
+newer glibc/GCC is what actually tests 3.12+.
 
 ## Building Containers
 
 All containers build with fakeroot (no sudo):
 
 ```bash
-apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
-apptainer build --fakeroot debian10.sif debian10.def
-apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
-apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
-apptainer build --fakeroot manylinux2014.sif manylinux2014.def
-apptainer build --fakeroot ubuntu24.04_pypy.sif ubuntu24.04_pypy.def
+apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
+apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
+apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
 
 **Note**: First build downloads the base Docker image (1-2 GB). Subsequent builds are fast.
@@ -43,13 +44,13 @@ apptainer build --fakeroot ubuntu24.04_pypy.sif ubuntu24.04_pypy.def
 ### 1. Run a Single Command Inside a Container
 
 ```bash
-apptainer exec ubuntu24.04.sif python3.11 -c "print('hello')"
+apptainer exec snakepit-manylinux2014.sif python3.11 -c "print('hello')"
 ```
 
 ### 2. Get an Interactive Shell
 
 ```bash
-apptainer exec --bind $(pwd):/workspace ubuntu24.04.sif bash
+apptainer exec --bind $(pwd):/workspace snakepit-manylinux2014.sif bash
 ```
 
 Use `--bind` to mount the current directory into the container (your files appear at `/workspace`).
@@ -114,7 +115,7 @@ Extensions may need the `.pypy-73.so` suffix (check `sysconfig.get_config_var('S
 The `test_in_container.sh` script automates the full test cycle (venv -> pip install -> build C ext -> run tests):
 
 ```bash
-./test_in_container.sh python3.11 ubuntu24.04.sif
+./test_in_container.sh python3.11 snakepit-manylinux2014.sif
 ```
 
 ### Test All Versions
@@ -140,7 +141,7 @@ python3.X python3.X-dev python3.X-venv \
 
 Python versions are pre-installed in the manylinux2014 Docker image at `/opt/python/`. If a new Python is available upstream, rebuild the container to pull the latest image:
 ```bash
-apptainer build --fakeroot manylinux2014.sif manylinux2014.def
+apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
 ```
 
 The manylinux image is rebuilt regularly by the pypa/manylinux project and includes CPython 3.9+.
@@ -153,20 +154,20 @@ uv python install cpython-3.X.0+freethreaded-linux-x86_64-gnu || \
     echo "Free-threading not available"
 ```
 
-Then symlink it:
-```bash
-FTPYTHON=$(uv python find cpython-3.X.*+freethreaded* 2>/dev/null || true)
-if [ -n "$FTPYTHON" ]; then
-    FTBIN=$(dirname "$FTPYTHON")
-    ln -s "$FTPYTHON" /usr/local/bin/python3.Xt
-fi
-```
+`uv python install` already creates a working `python3.Xt` shim in
+`/root/.local/bin/` on its own -- no manual symlinking needed as long as
+`/root/.local/bin` is on `PATH` (set in `%environment`). A `uv python find
+cpython-3.X.*+freethreaded*` + manual `ln -s` step is sometimes added
+defensively, but the glob doesn't expand the way you'd expect from inside a
+`%post` script (bash passes the literal unexpanded pattern to `uv` when
+nothing local matches it), so treat any manual symlink step as a no-op
+fallback, not the thing actually making the binary available.
 
 ### Register in `test_images.py`
 
 Add a tuple to the `PYTHON_VERSIONS` list:
 ```python
-("3.X", "ubuntu24.04.sif"),
+("3.X", "snakepit-modern.sif"),
 ```
 
 ### Rebuild the Container

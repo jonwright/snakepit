@@ -2,7 +2,7 @@
 set -e
 
 PYTHON=${1:-python3}
-CONTAINER=${2:-ubuntu24.04.sif}
+CONTAINER=${2:-snakepit-manylinux2014.sif}
 
 echo "=============================================================="
 echo "Testing with: $PYTHON in $CONTAINER"

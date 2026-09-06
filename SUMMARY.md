@@ -78,6 +78,13 @@ All Python versions tested successfully:
 
 [1] h5py not available on manylinux2014 due to CentOS 7 HDF5 1.8.12 being too old for building from source, and no binary wheel being available.
 
+**Note (historical)**: this table predates numpy dropping `manylinux2014`-tagged
+wheels for cp312+. As of the current containers (`snakepit-legacy.sif` / `snakepit-manylinux2014.sif`
+/ `snakepit-modern.sif`), the "3.12/3.13/3.14 (manylinux)" rows above no longer pass --
+`pip install numpy` fails there today (no compatible wheel, and the image's
+GCC 10.2 can't build numpy from source). Those versions are tested in
+`snakepit-modern.sif` instead. See `specification.md` under "manylinux2014" for details.
+
 
 ## What Gets Tested
 
@@ -106,24 +113,24 @@ test_extension/
 ### Test All Versions
 
 ```bash
-./test_in_container.sh python3.11 ubuntu24.04.sif
+./test_in_container.sh python3.11 snakepit-manylinux2014.sif
 ```
 
 ### Test One Version
 
 ```bash
 # Python 2.7
-./test_in_container.sh python2.7 ubuntu20.04.sif
+./test_in_container.sh python2.7 snakepit-legacy.sif
 
 # Python 3.13
-./test_in_container.sh python3.13 ubuntu24.04.sif
+./test_in_container.sh python3.13 snakepit-modern.sif
 ```
 
 ### Manual Interactive Testing
 
 ```bash
 # Enter container
-apptainer exec --bind $(pwd)/test_extension:/workspace ubuntu24.04.sif bash
+apptainer exec --bind $(pwd)/test_extension:/workspace snakepit-manylinux2014.sif bash
 
 # Inside container - manually run steps
 python3.11 -m venv venv_test

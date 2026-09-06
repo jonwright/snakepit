@@ -1,5 +1,15 @@
 # PyPy containers for cpyext testing
 
+**Update**: `ubuntu24.04_pypy.sif` described below has been retired and its
+three PyPy versions redistributed during the six-to-three container
+consolidation: PyPy 2.7 and PyPy 3.9 now live in `snakepit-legacy.sif` (Ubuntu 18.04,
+same install methods as below), and PyPy 3.11 now comes pre-installed in
+`snakepit-manylinux2014.sif` (the upstream pypa image bundles it directly, so it's no
+longer separately installed at all). See `specification.md` and `AGENTS.md`
+for the current three-container layout. The rest of this document describes
+the original design rationale, which still applies to how each PyPy version
+is sourced.
+
 ## Summary
 
 Add PyPy 2.7, 3.9, and 3.11 to the snakepit test matrix for c2py23
