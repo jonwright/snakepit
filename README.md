@@ -8,14 +8,17 @@ never compiled from source by this repo:
 
 - **`snakepit-legacy.sif`** (Ubuntu 18.04): 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9
 - **`snakepit-manylinux2014.sif`** (CentOS 7, glibc 2.17): 3.9, 3.10, 3.11, PyPy 3.11
-- **`snakepit-modern.sif`** (Ubuntu 24.04): 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t
+- **`snakepit-modern.sif`** (Ubuntu 24.04): 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t
 
-`snakepit-manylinux2014.sif` also ships interpreters for 3.12+ (they come pre-built in
-the upstream pypa image), but those aren't included in the test matrix: numpy
-no longer publishes wheels for that old glibc/GCC baseline above cp311, and
-the image's GCC 10.2 can't build numpy from source either. `snakepit-modern.sif`'s
-newer glibc/GCC is what actually gets those versions real package-based
-testing -- see `specification.md` for details.
+3.9/3.10/3.11 are deliberately tested in **both** `snakepit-manylinux2014.sif`
+(old glibc 2.17) and `snakepit-modern.sif` (modern glibc) -- preserving the
+original six-container design's dual-glibc coverage for those three
+versions. `snakepit-manylinux2014.sif` also ships interpreters for 3.12+
+(they come pre-built in the upstream pypa image), but those aren't included
+in the test matrix: numpy no longer publishes wheels for that old glibc/GCC
+baseline above cp311, and the image's GCC 10.2 can't build numpy from source
+either. `snakepit-modern.sif`'s newer glibc/GCC is what actually gets those
+versions real package-based testing -- see `specification.md` for details.
 
 ## Quick Start
 
@@ -43,10 +46,10 @@ No `sudo` required - uses Apptainer's fakeroot capability.
 # Interactive shell for Python 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 (Ubuntu 18.04)
 apptainer exec --bind $(pwd):/workspace snakepit-legacy.sif bash
 
-# Interactive shell for Python 3.9, 3.10, 3.11, PyPy 3.11 (manylinux2014, CentOS 7)
+# Interactive shell for Python 3.9, 3.10, 3.11, PyPy 3.11 (manylinux2014, CentOS 7, old glibc)
 apptainer exec --bind $(pwd):/workspace snakepit-manylinux2014.sif bash
 
-# Interactive shell for Python 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t (Ubuntu 24.04)
+# Interactive shell for Python 3.9-3.15, 3.14t, 3.15t (Ubuntu 24.04, modern glibc)
 apptainer exec --bind $(pwd):/workspace snakepit-modern.sif bash
 ```
 
@@ -56,7 +59,10 @@ apptainer exec --bind $(pwd):/workspace snakepit-modern.sif bash
 |-----------|----------------|------|
 | `snakepit-legacy.sif` | 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 | Ubuntu 18.04 |
 | `snakepit-manylinux2014.sif` | 3.9, 3.10, 3.11, PyPy 3.11 | CentOS 7 (glibc 2.17) |
-| `snakepit-modern.sif` | 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | Ubuntu 24.04 |
+| `snakepit-modern.sif` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | Ubuntu 24.04 |
+
+3.9/3.10/3.11 appear in both `snakepit-manylinux2014.sif` and
+`snakepit-modern.sif` on purpose (old-glibc leg + modern-glibc leg).
 
 PyPy 2.7 uses `virtualenv`; PyPy 3.9/3.11 use `uv venv` for isolated environments.
 
@@ -144,8 +150,8 @@ apptainer shell -e -B $(pwd)/test_workspace:/workspace snakepit-<container>.sif
 | Python version(s) | Container |
 |---|---|
 | 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 | `snakepit-legacy.sif` |
-| 3.9, 3.10, 3.11, PyPy 3.11 | `snakepit-manylinux2014.sif` |
-| 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | `snakepit-modern.sif` |
+| 3.9, 3.10, 3.11, PyPy 3.11 (old glibc) | `snakepit-manylinux2014.sif` |
+| 3.9, 3.10, 3.11 (modern glibc), 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | `snakepit-modern.sif` |
 
 To test one version by hand instead of the whole matrix, use
 `test_in_container.sh <python_cmd> <container>.sif` as shown above, or run

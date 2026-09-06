@@ -18,7 +18,7 @@ This guide teaches you (an LLM/AI agent) how to use these containers effectively
 |------------|---------|-----------------|---------------------|
 | `snakepit-legacy.sif` | Ubuntu 18.04 (Bionic) | 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 | native apt (2.7/3.6/3.7) + uv (3.8, PyPy 3.9) + pypy.org tarball (PyPy 2.7) |
 | `snakepit-manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11, PyPy 3.11 (tested) | manylinux2014 image (GCC 10). Also ships 3.12-3.15/3.14t/3.15t interpreters, but those aren't tested -- see note below |
-| `snakepit-modern.sif` | Ubuntu 24.04 | 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | native apt (3.12) + deadsnakes PPA (3.13-3.15) + uv (3.14t, 3.15t) |
+| `snakepit-modern.sif` | Ubuntu 24.04 | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | deadsnakes PPA (3.9-3.11, 3.13-3.15) + native apt (3.12) + uv (3.14t, 3.15t) |
 
 **Why manylinux2014 stops at 3.11 for real testing**: numpy no longer
 publishes `manylinux2014`-tagged wheels for cp312+ (its own wheel baseline
@@ -26,6 +26,12 @@ moved to `manylinux_2_28`), and this CentOS 7 image's GCC 10.2 can't build
 numpy from source either (numpy's meson build requires GCC >= 10.3, and no
 newer devtoolset was ever published for CentOS 7's SCL repo). `snakepit-modern.sif`'s
 newer glibc/GCC is what actually tests 3.12+.
+
+**Why 3.9/3.10/3.11 are in both containers**: this is intentional, not
+duplication left over from the consolidation. The original six-container
+design tested these three versions against both a modern glibc (Ubuntu
+24.04) and an old glibc (CentOS 7/manylinux2014) baseline, and that
+dual-glibc coverage is preserved here.
 
 ## Building Containers
 

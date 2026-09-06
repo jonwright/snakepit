@@ -20,15 +20,18 @@ LOG_FILE = SCRIPT_DIR / "test_results.log"
 # Python versions to test
 # Format: (version, sif_file)
 #
-# Three-container layout (consolidated from six -- see AGENTS.md):
+# Three-container layout (consolidated from six -- see AGENTS.md/MIGRATION.md):
 #   snakepit-legacy.sif       Ubuntu 18.04: 2.7, 3.6, 3.7 (native apt) + 3.8 (uv prebuilt)
 #                    + PyPy 2.7 (pypy.org tarball), PyPy 3.9 (uv prebuilt)
-#   snakepit-manylinux2014.sif  CentOS 7 (glibc 2.17), pypa-maintained: 3.9-3.11 tested here;
-#                    3.12+/3.14t/3.15/3.15t interpreters exist but numpy has no
-#                    manylinux2014 wheels for them and the image's GCC 10.2 can't
-#                    build numpy from source, so those are NOT in this test matrix.
-#   snakepit-modern.sif       Ubuntu 24.04 (apt + deadsnakes + uv): 3.12-3.15, 3.14t/3.15t --
+#   snakepit-manylinux2014.sif  CentOS 7 (glibc 2.17), pypa-maintained: 3.9-3.11 tested
+#                    here (old-glibc leg). 3.12+/3.14t/3.15/3.15t interpreters exist but
+#                    numpy has no manylinux2014 wheels for them and the image's GCC 10.2
+#                    can't build numpy from source, so those are NOT in this test matrix.
+#   snakepit-modern.sif       Ubuntu 24.04 (apt + deadsnakes + uv): 3.9-3.15, 3.14t/3.15t --
 #                    modern glibc means real numpy/h5py/numba wheels install cleanly.
+#                    3.9/3.10/3.11 are deliberately tested here *and* in
+#                    manylinux2014.sif (modern-glibc leg + old-glibc leg), matching the
+#                    original six-container design's dual-glibc coverage for those three.
 PYTHON_VERSIONS = [
     ("2.7", "snakepit-legacy.sif"),
     ("3.6", "snakepit-legacy.sif"),
@@ -37,6 +40,9 @@ PYTHON_VERSIONS = [
     ("3.9", "snakepit-manylinux2014.sif"),
     ("3.10", "snakepit-manylinux2014.sif"),
     ("3.11", "snakepit-manylinux2014.sif"),
+    ("3.9", "snakepit-modern.sif"),
+    ("3.10", "snakepit-modern.sif"),
+    ("3.11", "snakepit-modern.sif"),
     ("3.12", "snakepit-modern.sif"),
     ("3.13", "snakepit-modern.sif"),
     ("3.14", "snakepit-modern.sif"),
@@ -209,11 +215,15 @@ def main():
         prepare_workspace()
         
         # Run tests
+        # Keyed by (version, sif_file), not just version: some versions (e.g.
+        # 3.9-3.11) are deliberately tested against more than one container
+        # (dual-glibc coverage), and keying by version alone would silently
+        # collapse those into a single result.
         results = {}
         for python_version, sif_file in PYTHON_VERSIONS:
             success = test_python_version(python_version, sif_file)
-            results[python_version] = success
-            
+            results[(python_version, sif_file)] = success
+
             if not success:
                 print_error("Python " + python_version + " test FAILED")
                 log_write("Python " + python_version + " test FAILED")
@@ -223,18 +233,19 @@ def main():
                 print("  apptainer shell -e -B " + str(WORKSPACE_DIR) + ":/workspace " + str(sif_path))
                 log_write("\nStopping tests to fix this issue first.")
                 return 1
-        
+
         # Print summary
         print_header("Test Summary")
-        
+
         passed = sum(1 for v in results.values() if v)
         total = len(results)
-        
-        for version, success in results.items():
+
+        for (version, sif_file), success in results.items():
+            label = version + " (" + sif_file + ")"
             if success:
-                print_success("Python " + version)
+                print_success("Python " + label)
             else:
-                print_error("Python " + version)
+                print_error("Python " + label)
         
         summary = "\nResults: " + str(passed) + "/" + str(total) + " passed\n"
         print(summary)

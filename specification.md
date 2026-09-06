@@ -31,7 +31,8 @@ or pypy.org) -- never compiled from source by this repo.
 
 #### Image 2: `snakepit-manylinux2014.sif` (CentOS 7)
 - **Python 3.9, 3.10, 3.11** (pre-installed in manylinux2014 Docker image at
-  `/opt/python/`) -- the only versions actually tested here
+  `/opt/python/`) -- the old-glibc leg of these versions' dual-glibc testing
+  (see Image 3); also tested against a modern glibc in `snakepit-modern.sif`
 - **PyPy 3.11** (also pre-installed, tested here)
 - Also ships 3.12-3.15, 3.14t, 3.15t interpreters, but they are NOT in the
   test matrix: numpy no longer publishes manylinux2014 (glibc 2.17) wheels
@@ -42,13 +43,17 @@ or pypy.org) -- never compiled from source by this repo.
 - GCC 10 toolchain (devtoolset-10) with gfortran for f2py
 
 #### Image 3: `snakepit-modern.sif` (Ubuntu 24.04)
+- **Python 3.9, 3.10, 3.11** (deadsnakes PPA -- noble builds) -- the
+  modern-glibc leg of these versions' dual-glibc testing; also tested
+  against old glibc in `snakepit-manylinux2014.sif`, matching the original
+  six-container design's intentional overlap for exactly these three versions
 - **Python 3.12** (Ubuntu 24.04's own default python3)
 - **Python 3.13, 3.14, 3.15** (deadsnakes PPA -- noble builds; 3.15 tracks
   latest beta/rc/final)
 - **Python 3.14t, 3.15t** (free-threading/no-GIL, from uv python-build-standalone)
 - Modern glibc (2.39) means numpy/h5py/numba install as real wheels here with
   no source build needed -- this is what manylinux2014 can no longer do for
-  these versions.
+  3.12+.
 
 ### Common Components
 
@@ -74,7 +79,7 @@ apptainer exec --bind /path/to/your/project:/workspace \
 apptainer exec --bind /path/to/your/project:/workspace \
   snakepit-manylinux2014.sif bash
 
-# For Python 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t (Ubuntu 24.04)
+# For Python 3.9-3.15, 3.14t, 3.15t (Ubuntu 24.04)
 apptainer exec --bind /path/to/your/project:/workspace \
   snakepit-modern.sif bash
 ```
@@ -126,7 +131,7 @@ apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
 # Build manylinux2014 container (Python 3.9-3.11 tested, PyPy 3.11)
 apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
 
-# Build modern container (Python 3.12-3.15, 3.14t, 3.15t)
+# Build modern container (Python 3.9-3.15, 3.14t, 3.15t)
 apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
 
@@ -205,7 +210,7 @@ apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
 # Build manylinux2014 container (Python 3.9-3.11 tested, PyPy 3.11)
 apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
 
-# Build modern container (Python 3.12-3.15, 3.14t, 3.15t)
+# Build modern container (Python 3.9-3.15, 3.14t, 3.15t)
 apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
 
@@ -219,10 +224,10 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
 - **Python 3.8**: [uv](https://github.com/astral-sh/uv) / python-build-standalone
   prebuilt binary -- deadsnakes no longer builds for bionic/focal, and no distro
   ships 3.8 natively anymore
+- **Python 3.9, 3.10, 3.11, 3.13, 3.14, 3.15 (in `snakepit-modern.sif`)**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) (noble builds)
 - **Python 3.12**: Ubuntu 24.04's own default python3 (native apt)
-- **Python 3.13, 3.14, 3.15**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) (noble builds)
 - **Python 3.14t, 3.15t**: uv / python-build-standalone prebuilt free-threading binaries
-- **Python 3.9-3.11 (manylinux2014)**: Pre-installed in [quay.io/pypa/manylinux2014_x86_64](https://quay.io/repository/pypa/manylinux2014_x86_64) Docker image
+- **Python 3.9-3.11 (in `snakepit-manylinux2014.sif`, old-glibc leg)**: Pre-installed in [quay.io/pypa/manylinux2014_x86_64](https://quay.io/repository/pypa/manylinux2014_x86_64) Docker image
 - **PyPy 2.7**: [pypy.org](https://www.pypy.org/download.html) portable tarball (final release)
 - **PyPy 3.9**: uv prebuilt binary
 - **PyPy 3.11**: pre-installed in the manylinux2014 image
@@ -236,7 +241,10 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
    compatibility signal, but only for the CPython versions numpy still
    publishes old-baseline wheels for (3.9-3.11)
 3. **modern** (Ubuntu 24.04) covers everything manylinux2014's stale GCC/glibc
-   can no longer build or install wheels for (3.12+, free-threading builds)
+   can no longer build or install wheels for (3.12+, free-threading builds),
+   and also re-tests 3.9-3.11 against a modern glibc baseline -- preserving
+   the original six-container design's deliberate dual-glibc coverage for
+   those three versions (once here, once in manylinux2014)
 4. Three images (down from an earlier six) keeps every interpreter binary
    (apt/deadsnakes/uv/pypy.org/manylinux) while avoiding the two
    old-glibc-vs-new-CPython dead ends described above
@@ -316,7 +324,7 @@ done
 snakepit/
 |-- snakepit-legacy.def             # Apptainer definition (Python 2.7,3.6,3.7,3.8, PyPy 2.7,3.9)
 |-- snakepit-manylinux2014.def      # Apptainer definition (Python 3.9-3.11 tested, CentOS 7)
-|-- snakepit-modern.def             # Apptainer definition (Python 3.12-3.15, 3.14t, 3.15t)
+|-- snakepit-modern.def             # Apptainer definition (Python 3.9-3.15, 3.14t, 3.15t)
 |-- snakepit-legacy.sif             # Built container (generated)
 |-- snakepit-manylinux2014.sif      # Built container (generated)
 |-- snakepit-modern.sif             # Built container (generated)

@@ -109,8 +109,12 @@ Test a Python version:
   interpreters, but numpy has no manylinux2014 wheels for cp312+ and this
   image's GCC 10.2 can't build numpy from source (needs >= 10.3), so those
   are NOT in the test matrix. Use `snakepit-modern.sif` for those.
-- **snakepit-modern.sif** (Ubuntu 24.04): Python 3.12 (native default), 3.13, 3.14, 3.15
-  (deadsnakes PPA), 3.14t, 3.15t (uv prebuilt free-threading)
+- **snakepit-modern.sif** (Ubuntu 24.04): Python 3.9, 3.10, 3.11 (deadsnakes PPA),
+  3.12 (native default), 3.13, 3.14, 3.15 (deadsnakes PPA), 3.14t, 3.15t
+  (uv prebuilt free-threading). 3.9/3.10/3.11 are tested here *and* in
+  `snakepit-manylinux2014.sif` on purpose -- the original six-container
+  design tested those three versions against both a modern and an old glibc
+  baseline, and this preserves that.
 - **ubuntu20.04_ppc64le.sif**: Python 3.11 (Power9 / ppc64le, QEMU build)
 - **ubuntu24.04_aarch64.sif**: Python 3.11 (ARM64 / aarch64, QEMU build)
 
