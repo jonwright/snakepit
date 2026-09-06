@@ -58,13 +58,14 @@ Snakepit is a multi-Python Apptainer container testing suite for scientific Pyth
 
 Build containers (no sudo required - uses fakeroot):
 ```bash
-apptainer build --fakeroot ubuntu20.04.sif ubuntu20.04.def
-apptainer build --fakeroot debian10.sif debian10.def
-apptainer build --fakeroot ubuntu24.04.sif ubuntu24.04.def
-apptainer build --fakeroot ubuntu26.04.sif ubuntu26.04.def
-apptainer build --fakeroot manylinux2014.sif manylinux2014.def
-apptainer build --fakeroot ubuntu24.04_pypy.sif ubuntu24.04_pypy.def
+apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
+apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
+apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
+
+Three containers (consolidated from an earlier six -- see git history).
+Every interpreter is a binary from a package manager (apt, deadsnakes PPA,
+uv/python-build-standalone, or pypy.org) -- never compiled from source here.
 
 ### Cross-Architecture Containers (ppc64le / aarch64)
 
@@ -97,24 +98,39 @@ are emulated -- no native hardware required.
 
 Test a Python version:
 ```bash
-./test_in_container.sh python3.11 ubuntu24.04.sif
+./test_in_container.sh python3.11 snakepit-manylinux2014.sif
 ```
 
 ### Supported Python Versions
-- **ubuntu20.04.sif**: Python 2.7, 3.8
-- **debian10.sif**: Python 3.6
-- **ubuntu24.04.sif**: Python 3.7, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t
-- **ubuntu26.04.sif**: Python 3.15, 3.15t
-- **manylinux2014.sif**: Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14
-- **ubuntu24.04_pypy.sif**: PyPy 2.7, 3.9, 3.11
+- **snakepit-legacy.sif** (Ubuntu 18.04): Python 2.7, 3.6, 3.7 (native apt), 3.8 (uv prebuilt),
+  PyPy 2.7 (pypy.org tarball), PyPy 3.9 (uv prebuilt)
+- **snakepit-manylinux2014.sif** (CentOS 7, glibc 2.17): Python 3.9, 3.10, 3.11, PyPy 3.11
+  -- **tested versions only**. The image also ships 3.12-3.15/3.14t/3.15t
+  interpreters, but numpy has no manylinux2014 wheels for cp312+ and this
+  image's GCC 10.2 can't build numpy from source (needs >= 10.3), so those
+  are NOT in the test matrix. Use `snakepit-modern.sif` for those.
+- **snakepit-modern.sif** (Ubuntu 24.04): Python 3.9, 3.10, 3.11 (deadsnakes PPA),
+  3.12 (native default), 3.13, 3.14, 3.15 (deadsnakes PPA), 3.14t, 3.15t
+  (uv prebuilt free-threading). 3.9/3.10/3.11 are tested here *and* in
+  `snakepit-manylinux2014.sif` on purpose -- the original six-container
+  design tested those three versions against both a modern and an old glibc
+  baseline, and this preserves that.
 - **ubuntu20.04_ppc64le.sif**: Python 3.11 (Power9 / ppc64le, QEMU build)
 - **ubuntu24.04_aarch64.sif**: Python 3.11 (ARM64 / aarch64, QEMU build)
 
-**Note: Python 3.16** beta is expected May 2027. It will likely require a new ubuntu28.04
-container definition (tracking deadsnakes PPA) or a standalone uv-based install.
+**Fixed issue**: putting PyPy 2.7 in the same container as native CPython 2.7
+(`snakepit-legacy.sif`) exposed a bug in `test_extension/build_extension.sh`: its
+header-path fallback picked up CPython's `/usr/include/python2.7` before
+trying PyPy's own include dir, since both now coexist in one container.
+Fixed by checking `platform.python_implementation()` first and giving PyPy
+its own header/link path (it also needs an explicit `-lpypy-c` link with an
+rpath, unlike CPython). See `specification.md` under "PyPy 2.7".
+
+**Note: Python 3.16** beta is expected May 2027. It will likely require deadsnakes
+support for a newer Ubuntu series (tracked via `snakepit-modern.def`) or a standalone uv-based install.
 
 ### Key Files
-- `ubuntu20.04.def` / `debian10.def` / `ubuntu24.04.def` / `ubuntu26.04.def` / `manylinux2014.def` / `ubuntu24.04_pypy.def`: Apptainer container definitions
+- `snakepit-legacy.def` / `snakepit-manylinux2014.def` / `snakepit-modern.def`: Apptainer container definitions
 - `ubuntu20.04_ppc64le.def` / `ubuntu24.04_aarch64.def`: Cross-architecture definitions (QEMU)
 - `test_in_container.sh`: Primary test runner script
 - `test_extension/`: Example C extension with NumPy f2py

@@ -1,0 +1,118 @@
+Bootstrap: docker
+From: ubuntu:18.04
+
+%help
+    Ubuntu 18.04 (Bionic) container with Python 2.7, 3.6, 3.7 (native apt)
+    plus Python 3.8 and PyPy 3.9 (uv/python-build-standalone prebuilt binaries)
+    and PyPy 2.7 (pypy.org portable tarball).
+
+    Consolidates the legacy CPython/PyPy versions not covered by the
+    manylinux2014 image (which now ships 3.9-3.15, 3.14t/3.15t, PyPy 3.11).
+
+%labels
+    Author Snakepit
+    Version 1.0
+    BaseOS Ubuntu 18.04
+
+%post
+    export DEBIAN_FRONTEND=noninteractive
+
+    # Update and install basic tools
+    apt-get update && apt-get install -y \
+        git \
+        build-essential \
+        curl \
+        software-properties-common \
+        libhdf5-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Bionic's Docker base only enables main+restricted by default;
+    # python3.7 and the venv packages live in universe.
+    add-apt-repository universe -y
+
+    # Install Python 2.7 (native bionic main)
+    apt-get update && apt-get install -y \
+        python2.7 \
+        python2.7-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install pip for Python 2.7 (no ensurepip on py2)
+    curl https://bootstrap.pypa.io/pip/2.7/get-pip.py -o get-pip.py && \
+        python2.7 get-pip.py && \
+        rm get-pip.py && \
+        python2.7 -m pip install virtualenv
+
+    # Install Python 3.6 (default python3 on bionic, native main/universe)
+    apt-get update && apt-get install -y \
+        python3.6 \
+        python3.6-dev \
+        python3.6-venv \
+        python3-pip \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install Python 3.7 (native bionic universe)
+    apt-get update && apt-get install -y \
+        python3.7 \
+        python3.7-dev \
+        python3.7-venv \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Install uv for Python 3.8 and PyPy 3.9 (no apt/PPA source exists for
+    # these anymore -- deadsnakes dropped bionic/focal support entirely)
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="/root/.local/bin:$PATH"
+    export LC_ALL=C.UTF-8
+
+    # Python 3.8 via uv (python-build-standalone prebuilt binary; 3.8.20 is
+    # the final CPython 3.8 release)
+    uv python install cpython-3.8.20-linux-x86_64-gnu || \
+        echo "Python 3.8 not available via uv"
+    PY38=$(uv python find cpython-3.8 2>/dev/null || true)
+    if [ -n "$PY38" ]; then
+        ln -sf "$PY38" /usr/local/bin/python3.8
+    fi
+
+    # PyPy 3.9 via uv (prebuilt binary)
+    uv python install pypy3.9 || \
+        echo "PyPy 3.9 not available via uv"
+    PYPY39=$(uv python find pypy3.9 2>/dev/null || true)
+    if [ -n "$PYPY39" ]; then
+        ln -sf "$PYPY39" /usr/local/bin/pypy3.9
+        ln -sf "$PYPY39" /usr/local/bin/pypy3
+    fi
+
+    # PyPy 2.7 via portable tarball (v7.3.17 is the final PyPy2.7 release)
+    PYPY27_VERSION="7.3.17"
+    PYPY27_URL="https://downloads.python.org/pypy/pypy2.7-v${PYPY27_VERSION}-linux64.tar.bz2"
+    curl -L "$PYPY27_URL" -o /tmp/pypy27.tar.bz2 && \
+        mkdir -p /opt && \
+        tar -C /opt -xjf /tmp/pypy27.tar.bz2 && \
+        rm /tmp/pypy27.tar.bz2 && \
+        ln -sf /opt/pypy2.7-v${PYPY27_VERSION}-linux64/bin/pypy /usr/local/bin/pypy && \
+        ln -sf /opt/pypy2.7-v${PYPY27_VERSION}-linux64/bin/pypy /usr/local/bin/pypy2.7 && \
+        ln -sf /opt/pypy2.7-v${PYPY27_VERSION}-linux64/include /usr/local/include/pypy2.7 && \
+        echo "PyPy 2.7 v${PYPY27_VERSION} installed" || \
+        echo "ERROR: PyPy 2.7 download/extract failed"
+
+    # Bootstrap pip and virtualenv for PyPy 2.7
+    pypy -m ensurepip || true
+    pypy -m pip install --upgrade pip --quiet || true
+    pypy -m pip install virtualenv --quiet || true
+
+    # Verify installations
+    echo "---"
+    python2.7 --version && python2.7 -m pip --version
+    python3.6 --version && python3.6 -m pip --version
+    python3.7 --version
+    python3.8 --version || echo "Python 3.8 not installed"
+    pypy --version
+    pypy3.9 --version || echo "PyPy 3.9 not installed"
+    echo "---"
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export PATH="/root/.local/bin:$PATH"
+    export LC_ALL=C.UTF-8
+
+%runscript
+    exec /bin/bash "$@"

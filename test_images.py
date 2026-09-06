@@ -19,35 +19,43 @@ LOG_FILE = SCRIPT_DIR / "test_results.log"
 
 # Python versions to test
 # Format: (version, sif_file)
+#
+# Three-container layout (consolidated from six -- see AGENTS.md/MIGRATION.md):
+#   snakepit-legacy.sif       Ubuntu 18.04: 2.7, 3.6, 3.7 (native apt) + 3.8 (uv prebuilt)
+#                    + PyPy 2.7 (pypy.org tarball), PyPy 3.9 (uv prebuilt)
+#   snakepit-manylinux2014.sif  CentOS 7 (glibc 2.17), pypa-maintained: 3.9-3.11 tested
+#                    here (old-glibc leg). 3.12+/3.14t/3.15/3.15t interpreters exist but
+#                    numpy has no manylinux2014 wheels for them and the image's GCC 10.2
+#                    can't build numpy from source, so those are NOT in this test matrix.
+#   snakepit-modern.sif       Ubuntu 24.04 (apt + deadsnakes + uv): 3.9-3.15, 3.14t/3.15t --
+#                    modern glibc means real numpy/h5py/numba wheels install cleanly.
+#                    3.9/3.10/3.11 are deliberately tested here *and* in
+#                    manylinux2014.sif (modern-glibc leg + old-glibc leg), matching the
+#                    original six-container design's dual-glibc coverage for those three.
 PYTHON_VERSIONS = [
-    ("2.7", "ubuntu20.04.sif"),
-    ("3.8", "ubuntu20.04.sif"),
-    ("3.6", "debian10.sif"),
-    ("3.7", "ubuntu24.04.sif"),
-    ("3.9", "ubuntu24.04.sif"),
-    ("3.10", "ubuntu24.04.sif"),
-    ("3.11", "ubuntu24.04.sif"),
-    ("3.12", "ubuntu24.04.sif"),
-    ("3.13", "ubuntu24.04.sif"),
-    ("3.14", "ubuntu24.04.sif"),
-    ("3.14t", "ubuntu24.04.sif"),
-    ("3.15", "ubuntu26.04.sif"),
-    ("3.15t", "ubuntu26.04.sif"),
-    # manylinux2014 (CentOS 7, glibc 2.17) covers 3.9-3.14
-    # (3.14t/3.15/3.15t need newer libstdc++ or pre-release wheels not on PyPI)
-    ("3.9", "manylinux2014.sif"),
-    ("3.10", "manylinux2014.sif"),
-    ("3.11", "manylinux2014.sif"),
-    ("3.12", "manylinux2014.sif"),
-    ("3.13", "manylinux2014.sif"),
-    ("3.14", "manylinux2014.sif"),
+    ("2.7", "snakepit-legacy.sif"),
+    ("3.6", "snakepit-legacy.sif"),
+    ("3.7", "snakepit-legacy.sif"),
+    ("3.8", "snakepit-legacy.sif"),
+    ("3.9", "snakepit-manylinux2014.sif"),
+    ("3.10", "snakepit-manylinux2014.sif"),
+    ("3.11", "snakepit-manylinux2014.sif"),
+    ("3.9", "snakepit-modern.sif"),
+    ("3.10", "snakepit-modern.sif"),
+    ("3.11", "snakepit-modern.sif"),
+    ("3.12", "snakepit-modern.sif"),
+    ("3.13", "snakepit-modern.sif"),
+    ("3.14", "snakepit-modern.sif"),
+    ("3.14t", "snakepit-modern.sif"),
+    ("3.15", "snakepit-modern.sif"),
+    ("3.15t", "snakepit-modern.sif"),
     # Cross-architecture containers (QEMU user-mode emulation required for build/test)
     ("3.11", "ubuntu20.04_ppc64le.sif"),
     ("3.11", "ubuntu24.04_aarch64.sif"),
     # PyPy containers (cpython-compatible cpyext ABI testing)
-    ("pypy2.7", "ubuntu24.04_pypy.sif"),
-    ("pypy3.9", "ubuntu24.04_pypy.sif"),
-    ("pypy3.11", "ubuntu24.04_pypy.sif"),
+    ("pypy2.7", "snakepit-legacy.sif"),
+    ("pypy3.9", "snakepit-legacy.sif"),
+    ("pypy3.11", "snakepit-manylinux2014.sif"),
 ]
 
 
@@ -147,11 +155,7 @@ def test_python_version(python_version, sif_file):
     # Single command to run all tests
     print_step("Running unified test with " + system_py)
     
-    # Use "preinstalled" mode for ubuntu26.04 Python 3.15 (packages built into the container)
-    if sif_file == "ubuntu26.04.sif" and python_version == "3.15":
-        test_cmd = "cd /workspace && bash run_tests.sh " + system_py + " preinstalled"
-    else:
-        test_cmd = "cd /workspace && bash run_tests.sh " + system_py
+    test_cmd = "cd /workspace && bash run_tests.sh " + system_py
     retcode, stdout, stderr = run_apptainer(sif_file, python_version, test_cmd, capture_output=True)
     
     if retcode != 0:
@@ -211,11 +215,15 @@ def main():
         prepare_workspace()
         
         # Run tests
+        # Keyed by (version, sif_file), not just version: some versions (e.g.
+        # 3.9-3.11) are deliberately tested against more than one container
+        # (dual-glibc coverage), and keying by version alone would silently
+        # collapse those into a single result.
         results = {}
         for python_version, sif_file in PYTHON_VERSIONS:
             success = test_python_version(python_version, sif_file)
-            results[python_version] = success
-            
+            results[(python_version, sif_file)] = success
+
             if not success:
                 print_error("Python " + python_version + " test FAILED")
                 log_write("Python " + python_version + " test FAILED")
@@ -225,18 +233,19 @@ def main():
                 print("  apptainer shell -e -B " + str(WORKSPACE_DIR) + ":/workspace " + str(sif_path))
                 log_write("\nStopping tests to fix this issue first.")
                 return 1
-        
+
         # Print summary
         print_header("Test Summary")
-        
+
         passed = sum(1 for v in results.values() if v)
         total = len(results)
-        
-        for version, success in results.items():
+
+        for (version, sif_file), success in results.items():
+            label = version + " (" + sif_file + ")"
             if success:
-                print_success("Python " + version)
+                print_success("Python " + label)
             else:
-                print_error("Python " + version)
+                print_error("Python " + label)
         
         summary = "\nResults: " + str(passed) + "/" + str(total) + " passed\n"
         print(summary)
