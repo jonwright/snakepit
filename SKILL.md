@@ -18,6 +18,7 @@ This guide teaches you (an LLM/AI agent) how to use these containers effectively
 |------------|---------|-----------------|---------------------|
 | `snakepit-legacy.sif` | Ubuntu 18.04 (Bionic) | 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 | native apt (2.7/3.6/3.7) + uv (3.8, PyPy 3.9) + pypy.org tarball (PyPy 2.7) |
 | `snakepit-manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11 (tested) | manylinux2014 image (GCC 10). Also ships 3.12/3.13 (which have numpy/h5py wheels) but those aren't tested, and 3.14+/3.14t/3.15/3.15t with no wheels -- see note below |
+| `snakepit-manylinux_2_28.sif` | AlmaLinux 8 (glibc 2.28) | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, PyPy 3.11 (tested) | pypa manylinux_2_28 image (quay.io/pypa/manylinux_2_28_x86_64). No 3.16/3.16t yet |
 | `snakepit-modern.sif` | Ubuntu 24.04 | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, 3.16 (alpha), 3.16t, PyPy 3.11 | deadsnakes PPA (3.9-3.11, 3.13-3.16) + native apt (3.12) + uv (3.14t, 3.15t, 3.16t, PyPy 3.11) |
 
 **Why manylinux2014 stops at 3.11 for real testing**: numpy no longer
@@ -25,7 +26,10 @@ publishes `manylinux2014`-tagged wheels for cp314+ (its own wheel baseline
 moved to `manylinux_2_28`). The image still carries 3.12/3.13, and numpy
 2.2.6 does have manylinux2014 wheels for cp312/cp313, but those two are not
 in the test matrix; 3.14 and 3.14t/3.15/3.15t have no wheels at all.
-`snakepit-modern.sif`'s newer glibc is what actually tests 3.12+.
+`snakepit-manylinux_2_28.sif` (glibc 2.28) is where numpy >= 2.3, h5py >= 3.15
+and cibuildwheel >= 3 wheels land -- the current wheel floor -- while
+`snakepit-modern.sif`'s newest glibc is what actually tests 3.12+ and the
+pre-release/free-threading builds.
 
 **Why 3.9/3.10/3.11 are in both containers**: this is intentional, not
 duplication left over from the consolidation. The original six-container
@@ -40,6 +44,7 @@ All containers build with fakeroot (no sudo):
 ```bash
 apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
 apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
+apptainer build --fakeroot snakepit-manylinux_2_28.sif snakepit-manylinux_2_28.def
 apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
 

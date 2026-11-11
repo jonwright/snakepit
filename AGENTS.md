@@ -60,10 +60,11 @@ Build containers (no sudo required - uses fakeroot):
 ```bash
 apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
 apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
+apptainer build --fakeroot snakepit-manylinux_2_28.sif snakepit-manylinux_2_28.def
 apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
 
-Three containers (consolidated from an earlier six -- see git history).
+Four containers (consolidated from an earlier six -- see git history).
 Every interpreter is a binary from a package manager (apt, deadsnakes PPA,
 uv/python-build-standalone, or pypy.org) -- never compiled from source here.
 
@@ -111,8 +112,17 @@ Test a Python version:
   NOT in the test matrix; 3.14 and 3.14t/3.15/3.15t have no manylinux2014
   wheels at all. The base image's PyPy 3.11 is still present but has no
   numpy here (numpy's pp311 wheels need glibc >= 2.28); PyPy 3.11 is
-  tested in `snakepit-modern.sif`. Use `snakepit-modern.sif` for
-  the pre-release/free-threading versions.
+  tested in `snakepit-manylinux_2_28.sif` and `snakepit-modern.sif`. Use
+  `snakepit-manylinux_2_28.sif` or `snakepit-modern.sif` for 3.12+ and
+  free-threading; 3.16/3.16t are only in `snakepit-modern.sif`.
+- **snakepit-manylinux_2_28.sif** (AlmaLinux 8, glibc 2.28): Python 3.9, 3.10,
+  3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, PyPy 3.11 (7.3.23) -- all
+  tested. Built from quay.io/pypa/manylinux_2_28_x86_64. This is the current
+  wheel floor of the scientific stack (numpy >= 2.3, h5py >= 3.15,
+  cibuildwheel >= 3). No 3.16/3.16t (not in the pypa base image yet).
+  Downstream wheels still tagged manylinux2014 (e.g. bslz4_to_sparse,
+  c2ImageD11 x86_64) should be tested on both this and
+  `snakepit-manylinux2014.sif`.
 - **snakepit-modern.sif** (Ubuntu 24.04): Python 3.9, 3.10, 3.11, 3.13, 3.14, 3.15
   (deadsnakes PPA), 3.12 (native default), 3.16 (deadsnakes PPA, alpha),
   3.14t, 3.15t, 3.16t (uv prebuilt free-threading), PyPy 3.11 (uv prebuilt,
@@ -158,7 +168,7 @@ interpreters (see `BARE_VERSIONS` in `test_images.py`); PyPy 3.11 in
 `snakepit-modern.sif` does have numpy 2.4.6 and passes the matrix.
 
 ### Key Files
-- `snakepit-legacy.def` / `snakepit-manylinux2014.def` / `snakepit-modern.def`: Apptainer container definitions
+- `snakepit-legacy.def` / `snakepit-manylinux2014.def` / `snakepit-manylinux_2_28.def` / `snakepit-modern.def`: Apptainer container definitions
 - `ubuntu20.04_ppc64le.def` / `ubuntu24.04_aarch64.def`: Cross-architecture definitions (QEMU)
 - `test_in_container.sh`: Primary test runner script
 - `test_extension/`: Example C extension with NumPy f2py

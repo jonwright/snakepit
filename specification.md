@@ -14,11 +14,20 @@ Snakepit provides Apptainer container images for testing scientific Python C ext
 
 ## Architecture
 
-### Three-Image Strategy
+### Four-Image Strategy
 
-The project uses three images. Each Python version's interpreter is always a
+The project uses four images. Each Python version's interpreter is always a
 binary from a package manager (apt, deadsnakes PPA, uv/python-build-standalone,
-or pypy.org) -- never compiled from source by this repo.
+pypy.org, or the pypa manylinux image) -- never compiled from source by this repo.
+
+Each container targets a different glibc baseline. `snakepit-manylinux2014.sif`
+(glibc 2.17) is the oldest baseline -- for wheels still tagged manylinux2014
+(e.g. bslz4_to_sparse, c2ImageD11 x86_64) -- but only numpy <= 2.2.6 and
+h5py <= 3.14.0 publish wheels for it, so its real package testing stops at
+3.9-3.11. `snakepit-manylinux_2_28.sif` (glibc 2.28) is the current wheel
+floor of the scientific stack (numpy >= 2.3, h5py >= 3.15, cibuildwheel >= 3
+by default). `snakepit-modern.sif` (Ubuntu 24.04) is the newest glibc plus the
+pre-release interpreters (3.16, free-threading 3.16t) and PyPy 3.11.
 
 #### Image 1: `snakepit-legacy.sif` (Ubuntu 18.04)
 - **Python 2.7** (native bionic main repo)
@@ -40,11 +49,25 @@ or pypy.org) -- never compiled from source by this repo.
   at all. See "manylinux2014" under Compatibility Notes.
 - PyPy 3.11 from the pypa base image is still present but untested here:
   numpy's pp311 wheels need glibc >= 2.28, so it is tested in
-  `snakepit-modern.sif` instead.
+  `snakepit-manylinux_2_28.sif` and `snakepit-modern.sif` instead.
 - Oldest glibc (2.17) for maximum binary compatibility testing
 - GCC 10 toolchain (devtoolset-10) with gfortran for f2py
 
-#### Image 3: `snakepit-modern.sif` (Ubuntu 24.04)
+#### Image 3: `snakepit-manylinux_2_28.sif` (AlmaLinux 8)
+- Built from [quay.io/pypa/manylinux_2_28_x86_64](https://quay.io/repository/pypa/manylinux_2_28_x86_64)
+  (AlmaLinux 8, glibc 2.28)
+- **Python 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t** (pre-installed
+  in the pypa image at `/opt/python/`) -- all tested
+- **PyPy 3.11** (pre-installed in the pypa image, PyPy 7.3.23) -- tested;
+  numpy's pp311 wheels need glibc >= 2.28, which this image has (unlike
+  manylinux2014)
+- **No 3.16/3.16t** -- they are not in the pypa base image yet
+- This is the current manylinux wheel floor: numpy >= 2.3, h5py >= 3.15,
+  and cibuildwheel >= 3 all target manylinux_2_28, and it is the right place
+  to test downstream wheels that are no longer manylinux2014-only
+- GCC toolchain with gfortran for f2py
+
+#### Image 4: `snakepit-modern.sif` (Ubuntu 24.04)
 - **Python 3.9, 3.10, 3.11** (deadsnakes PPA -- noble builds) -- the
   modern-glibc leg of these versions' dual-glibc testing; also tested
   against old glibc in `snakepit-manylinux2014.sif`, matching the original
@@ -85,6 +108,10 @@ apptainer exec --bind /path/to/your/project:/workspace \
 # For Python 3.9, 3.10, 3.11 (manylinux2014, CentOS 7)
 apptainer exec --bind /path/to/your/project:/workspace \
   snakepit-manylinux2014.sif bash
+
+# For Python 3.9-3.15, 3.14t, 3.15t, PyPy 3.11 (manylinux_2_28, AlmaLinux 8)
+apptainer exec --bind /path/to/your/project:/workspace \
+  snakepit-manylinux_2_28.sif bash
 
 # For Python 3.9-3.16, 3.14t, 3.15t, 3.16t, PyPy 3.11 (Ubuntu 24.04)
 apptainer exec --bind /path/to/your/project:/workspace \
@@ -135,8 +162,11 @@ Build the Apptainer SIF images using fakeroot (no sudo required):
 # Build legacy container (Python 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9)
 apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
 
-# Build manylinux2014 container (Python 3.9-3.11 tested, PyPy 3.11)
+# Build manylinux2014 container (Python 3.9-3.11 tested)
 apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
+
+# Build manylinux_2_28 container (Python 3.9-3.15, 3.14t, 3.15t, PyPy 3.11)
+apptainer build --fakeroot snakepit-manylinux_2_28.sif snakepit-manylinux_2_28.def
 
 # Build modern container (Python 3.9-3.16, 3.14t, 3.15t, 3.16t)
 apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
@@ -214,8 +244,11 @@ All tests print package versions for verification.
 # Build legacy container (Python 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9)
 apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
 
-# Build manylinux2014 container (Python 3.9-3.11 tested, PyPy 3.11)
+# Build manylinux2014 container (Python 3.9-3.11 tested)
 apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
+
+# Build manylinux_2_28 container (Python 3.9-3.15, 3.14t, 3.15t, PyPy 3.11)
+apptainer build --fakeroot snakepit-manylinux_2_28.sif snakepit-manylinux_2_28.def
 
 # Build modern container (Python 3.9-3.16, 3.14t, 3.15t, 3.16t)
 apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
@@ -235,12 +268,14 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
 - **Python 3.12**: Ubuntu 24.04's own default python3 (native apt)
 - **Python 3.14t, 3.15t, 3.16t**: uv / python-build-standalone prebuilt free-threading binaries
 - **Python 3.9-3.11 (in `snakepit-manylinux2014.sif`, old-glibc leg)**: Pre-installed in [quay.io/pypa/manylinux2014_x86_64](https://quay.io/repository/pypa/manylinux2014_x86_64) Docker image
+- **Python 3.9-3.15, 3.14t, 3.15t (in `snakepit-manylinux_2_28.sif`)**: Pre-installed in [quay.io/pypa/manylinux_2_28_x86_64](https://quay.io/repository/pypa/manylinux_2_28_x86_64) Docker image; no 3.16/3.16t there yet
 - **PyPy 2.7**: [pypy.org](https://www.pypy.org/download.html) portable tarball (final release)
 - **PyPy 3.9**: uv prebuilt binary
 - **PyPy 3.11**: uv prebuilt (pinned to pypy-3.11.15 = PyPy 7.3.23; see
-  `snakepit-modern.def`), in `snakepit-modern.sif`
+  `snakepit-modern.def`), in `snakepit-modern.sif`; the base manylinux_2_28
+  image also ships PyPy 3.11 (7.3.23), which is tested there too
 
-### Why Three Images?
+### Why Four Images?
 
 1. **legacy** (Ubuntu 18.04) is the only base whose own apt repos still carry
    2.7/3.6/3.7 natively; 3.8 and PyPy 3.9 are bolted on via uv since no
@@ -248,12 +283,17 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
 2. **manylinux2014** (CentOS 7, glibc 2.17) gives the oldest-glibc binary
    compatibility signal, but only for the CPython versions numpy still
    publishes old-baseline wheels for (3.9-3.11)
-3. **modern** (Ubuntu 24.04) covers everything manylinux2014's stale GCC/glibc
+3. **manylinux_2_28** (AlmaLinux 8) is the current wheel floor of the
+   scientific stack -- numpy >= 2.3 and h5py >= 3.15 publish manylinux_2_28
+   wheels only, and cibuildwheel >= 3 builds here by default -- so it covers
+   modern numpy/h5py against a realistic older-glibc baseline for 3.9-3.15
+   plus PyPy 3.11
+4. **modern** (Ubuntu 24.04) covers everything manylinux2014's stale GCC/glibc
    can no longer build or install wheels for (3.12+, free-threading builds),
    and also re-tests 3.9-3.11 against a modern glibc baseline -- preserving
    the original six-container design's deliberate dual-glibc coverage for
    those three versions (once here, once in manylinux2014)
-4. Three images (down from an earlier six) keeps every interpreter binary
+5. Four images (down from an earlier six) keeps every interpreter binary
    (apt/deadsnakes/uv/pypy.org/manylinux) while avoiding the two
    old-glibc-vs-new-CPython dead ends described above
 
@@ -332,9 +372,11 @@ done
 snakepit/
 |-- snakepit-legacy.def             # Apptainer definition (Python 2.7,3.6,3.7,3.8, PyPy 2.7,3.9)
 |-- snakepit-manylinux2014.def      # Apptainer definition (Python 3.9-3.11 tested, CentOS 7)
+|-- snakepit-manylinux_2_28.def     # Apptainer definition (Python 3.9-3.15, 3.14t, 3.15t, PyPy 3.11)
 |-- snakepit-modern.def             # Apptainer definition (Python 3.9-3.16, 3.14t, 3.15t, 3.16t)
 |-- snakepit-legacy.sif             # Built container (generated)
 |-- snakepit-manylinux2014.sif      # Built container (generated)
+|-- snakepit-manylinux_2_28.sif     # Built container (generated)
 |-- snakepit-modern.sif             # Built container (generated)
 |-- AGENTS.md              # Agent instructions and quick reference
 |-- SKILL.md               # Detailed container usage guide for AI agents
@@ -411,10 +453,27 @@ snakepit/
   two are not in the test matrix. 3.14 and 3.14t/3.15/3.15t have no
   manylinux2014 wheels at all. Everything is installed wheels-only (see the
   "never build from source" rule in AGENTS.md). Real testing for 3.12+ happens
-  in `snakepit-modern.sif` instead, which has a modern enough glibc for
-  numpy's current wheels to install directly.
-- PyPy 3.11 (from the base image) has no numpy wheel here and is tested in
-  `snakepit-modern.sif` instead (numpy's pp311 wheels need glibc >= 2.28).
+  in `snakepit-manylinux_2_28.sif` and `snakepit-modern.sif` instead. Downstream
+  wheels still tagged manylinux2014 (e.g. bslz4_to_sparse, c2ImageD11 x86_64)
+  should be tested here for the old-glibc claim and in
+  `snakepit-manylinux_2_28.sif` for the modern wheel floor.
+- PyPy 3.11 (from the base image) has no numpy wheel here (numpy's pp311
+  wheels need glibc >= 2.28) and is tested in `snakepit-manylinux_2_28.sif`
+  and `snakepit-modern.sif` instead.
+
+### manylinux_2_28
+- AlmaLinux 8 base with glibc 2.28, from the pypa
+  `manylinux_2_28_x86_64` image (`quay.io/pypa/manylinux_2_28_x86_64`)
+- This is the current wheel floor of the scientific stack: numpy >= 2.3 and
+  h5py >= 3.15 publish manylinux_2_28 wheels only, and cibuildwheel >= 3
+  builds here by default
+- **3.9-3.15, 3.14t, 3.15t and PyPy 3.11 are all in the test matrix.** No
+  3.16/3.16t -- those are not in the pypa base image yet
+- PyPy 3.11 (7.3.23) is tested here because numpy's pp311 wheels need glibc
+  >= 2.28, which manylinux2014 (2.17) lacks
+- Unlike manylinux2014, glibc 2.28 lets modern numpy/h5py/numba wheels
+  install directly, so this image tests the full current stack against a
+  realistic (but not the newest) glibc baseline
 
 ## Future Enhancements
 

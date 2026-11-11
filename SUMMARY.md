@@ -87,6 +87,23 @@ or uses a plain venv to ignore the image's packages.
 | python3.15t | 3.15.2 | - | - | - |
 | pypy3.11 | 3.11.15 | - | - | - |
 
+### `snakepit-manylinux_2_28.sif` (790 MB, 828825600 bytes)
+
+| Interpreter | Python | NumPy | numba | h5py |
+|---|---|---|---|---|
+| python3.9 | 3.9.25 | 2.0.2 | 0.60.0 | 3.14.0 |
+| python3.10 | 3.10.22 | 2.2.6 | 0.68.1 | 3.16.0 |
+| python3.11 | 3.11.18 | 2.4.6 | 0.68.1 | 3.16.0 |
+| python3.12 | 3.12.16 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.13 | 3.13.18 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.14 | 3.14.10 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.14t | 3.14.10 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.15 | 3.15.2 | 2.5.4 | 0.68.1 | 3.17.0.dev0 |
+| python3.15t | 3.15.2 | 2.5.4 | - | 3.17.0.dev0 |
+| pypy3.11 | 3.11.15 | 2.4.6 | - | - |
+
+(no python3.16/3.16t in the pypa base image yet)
+
 ### `snakepit-modern.sif` (747 MB, 783081472 bytes)
 
 | Interpreter | Python | NumPy | numba | h5py |
@@ -109,12 +126,14 @@ Only wheels are ever installed -- no upstream package is built from source.
 index until h5py 3.17.0 ships cp315 wheels. 3.16/3.16t and pypy2.7 have no
 numpy/numba/h5py wheels and are tested as bare interpreters.
 
-Test matrix (2026-11-11): all 21 entries run against
-`snakepit-legacy.sif`, `snakepit-manylinux2014.sif` and `snakepit-modern.sif`
-pass (3.16, 3.16t and pypy2.7 as bare interpreters); the 2 cross-architecture
-entries were skipped because those images were not built. PyPy 3.11 is
-tested in `snakepit-modern.sif`, no longer in `snakepit-manylinux2014.sif`
-(numpy's pp311 wheels need glibc >= 2.28).
+Test matrix (2026-11-11): all 31 entries run against `snakepit-legacy.sif`,
+`snakepit-manylinux2014.sif`, `snakepit-manylinux_2_28.sif` and
+`snakepit-modern.sif` pass (3.16, 3.16t and pypy2.7 as bare interpreters);
+the 2 cross-architecture entries were skipped because those images were not
+built. PyPy 3.11 is tested in `snakepit-manylinux_2_28.sif` and
+`snakepit-modern.sif`, no longer in `snakepit-manylinux2014.sif` (numpy's
+pp311 wheels need glibc >= 2.28). The manylinux_2_28 image has no 3.16/3.16t
+(not in the pypa base image yet).
 
 
 ## What Gets Tested
