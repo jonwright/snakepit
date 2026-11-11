@@ -126,8 +126,30 @@ Fixed by checking `platform.python_implementation()` first and giving PyPy
 its own header/link path (it also needs an explicit `-lpypy-c` link with an
 rpath, unlike CPython). See `specification.md` under "PyPy 2.7".
 
-**Note: Python 3.16** beta is expected May 2027. It will likely require deadsnakes
-support for a newer Ubuntu series (tracked via `snakepit-modern.def`) or a standalone uv-based install.
+**Note: Python 3.16** is in alpha (3.16.0a1 on deadsnakes noble, a2 via uv as of
+2026-11). `snakepit-modern.def` installs 3.16/3.16t optionally; beta 1 is expected
+May 2027. Until numpy/h5py/numba publish cp316 wheels, 3.16/3.16t are tested as
+bare interpreters (`BARE_VERSIONS` in `test_images.py`: venv + stdlib only).
+
+**Rule: never build upstream packages from source.** `run_tests.sh` installs
+numpy/h5py/numba with `--only-binary :all:`. If a package has no wheel for an
+interpreter, it is skipped (h5py, numba) or that version is tested bare (numpy).
+Only exception: a version that already depended on a source build before this
+rule (record it here if one turns up). Pre-release *wheels* are allowed:
+3.15/3.15t take h5py from the scientific-python nightly wheel index until
+h5py 3.17.0 ships cp315 wheels (h5py issue #2993). 3.16t has no h5py wheel at
+all, and numpy has no cp316 wheels even as nightlies, so 3.16/3.16t stay bare.
+
+**Preinstalled packages**: `install_sci_packages.sh` (run at build time) puts
+numpy/numba/h5py wheels into every interpreter's system site-packages; see
+`/opt/snakepit/packages.txt` in each image for what is present ("-" = no wheel).
+Downstream opts in with `venv --system-site-packages` (or `virtualenv`/`uv venv`
+with the same flag), or uses a plain venv to ignore them. Apptainer mounts
+$HOME, so: set `PYTHONNOUSERSITE=1` (else ~/.local/lib/pythonX.Y packages
+shadow the image's) and give `uv venv --python` an absolute interpreter path
+(else uv may pick a Python from the host's ~/.local/share/uv). `run_tests.sh`
+does both. PyPy 2.7 and PyPy 3.11 (manylinux2014) have no numpy wheels and
+currently fail the matrix.
 
 ### Key Files
 - `snakepit-legacy.def` / `snakepit-manylinux2014.def` / `snakepit-modern.def`: Apptainer container definitions

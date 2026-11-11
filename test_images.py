@@ -49,18 +49,29 @@ PYTHON_VERSIONS = [
     ("3.14t", "snakepit-modern.sif"),
     ("3.15", "snakepit-modern.sif"),
     ("3.15t", "snakepit-modern.sif"),
+    # 3.16 is alpha: tested as a bare interpreter (see BARE_VERSIONS) until
+    # numpy/h5py/numba publish cp316 wheels.
+    ("3.16", "snakepit-modern.sif"),
+    ("3.16t", "snakepit-modern.sif"),
     # Cross-architecture containers (QEMU user-mode emulation required for build/test)
     ("3.11", "ubuntu20.04_ppc64le.sif"),
     ("3.11", "ubuntu24.04_aarch64.sif"),
     # PyPy containers (cpython-compatible cpyext ABI testing)
     ("pypy2.7", "snakepit-legacy.sif"),
     ("pypy3.9", "snakepit-legacy.sif"),
-    ("pypy3.11", "snakepit-manylinux2014.sif"),
+    ("pypy3.11", "snakepit-modern.sif"),
 ]
 
 
 
 
+
+# Versions tested as a bare interpreter (venv + stdlib only, no packages):
+# pre-releases whose upstream wheels don't exist yet. We never build upstream
+# packages from source, so drop a version from here once numpy has wheels.
+# pypy2.7: numpy never published PyPy 2.7 wheels; kept only as an interpreter
+# check (implementation coverage for downstream C-extension projects).
+BARE_VERSIONS = {"3.16", "3.16t", "pypy2.7"}
 
 # Global log file handle
 _log_file = None
@@ -155,7 +166,15 @@ def test_python_version(python_version, sif_file):
     # Single command to run all tests
     print_step("Running unified test with " + system_py)
     
-    test_cmd = "cd /workspace && bash run_tests.sh " + system_py
+    # Default: test the numpy/numba/h5py baked into the image (what
+    # downstream users get with --system-site-packages). SNAKEPIT_TEST_MODE=fresh
+    # instead pip-installs wheels into an empty venv.
+    mode = os.environ.get("SNAKEPIT_TEST_MODE", "preinstalled")
+    if python_version in BARE_VERSIONS:
+        mode = "bare"
+    elif mode == "fresh":
+        mode = ""
+    test_cmd = "cd /workspace && bash run_tests.sh " + system_py + " " + mode
     retcode, stdout, stderr = run_apptainer(sif_file, python_version, test_cmd, capture_output=True)
     
     if retcode != 0:
