@@ -44,7 +44,8 @@ SYS_SITE=""
 [[ "${MODE}" == "preinstalled" ]] && SYS_SITE="--system-site-packages"
 if [[ "${PYTHON_CMD}" == pypy2* || "${PYTHON_CMD}" == *"2.7"* ]]; then
     ${PYTHON_CMD} -m virtualenv ${SYS_SITE} ${VENV_DIR}
-elif [[ "${PYTHON_CMD}" == pypy3* || "${PYTHON_CMD}" == *"t" ]]; then
+elif [[ "${PYTHON_CMD}" == pypy3* || "${PYTHON_CMD}" == *"t" ]] && \
+        PATH="/root/.local/bin:$PATH" command -v uv >/dev/null 2>&1; then
     # uv-managed interpreters (PyPy 3, free-threading builds)
     export PATH="/root/.local/bin:$PATH"
     # Absolute path: a bare name lets uv pick a uv-managed Python from the

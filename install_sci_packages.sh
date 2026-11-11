@@ -4,7 +4,9 @@
 #   python3.X -m venv --system-site-packages ...   (or virtualenv / uv venv)
 # or ignore them with a plain venv.
 #
-# Usage: install_sci_packages.sh PY [PY ...]
+# Usage: install_sci_packages.sh [--manifest-only] PY [PY ...]
+#   --manifest-only: packages already installed (e.g. by mamba); only
+#                    write the manifest.
 #
 # Rules: wheels only (never build upstream packages from source). A package
 # with no wheel for an interpreter is skipped and shows as "-" in the
@@ -35,7 +37,10 @@ install_one() {
     fi
 }
 
-for PY in "$@"; do
+MANIFEST_ONLY=0
+if [ "${1:-}" = "--manifest-only" ]; then MANIFEST_ONLY=1; shift; fi
+
+[ "$MANIFEST_ONLY" = 1 ] || for PY in "$@"; do
     if ! command -v "$PY" >/dev/null 2>&1; then
         echo "[skip] $PY not found"
         continue

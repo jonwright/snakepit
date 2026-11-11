@@ -29,3 +29,5 @@ test_results.log
 # OS
 .DS_Store
 Thumbs.db
+test_results_p9.log
+build_p9-*.log

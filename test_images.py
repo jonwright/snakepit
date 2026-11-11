@@ -4,6 +4,7 @@ Test script for snakepit Apptainer images.
 Tests that each Python version can create venvs, install numpy/numba/h5py, and build C extensions.
 """
 import os
+import platform
 import subprocess
 import sys
 import shutil
@@ -66,8 +67,16 @@ PYTHON_VERSIONS = [
     # numpy/h5py/numba publish cp316 wheels.
     ("3.16", "snakepit-modern.sif"),
     ("3.16t", "snakepit-modern.sif"),
-    # Cross-architecture containers (QEMU user-mode emulation required for build/test)
-    ("3.11", "ubuntu20.04_ppc64le.sif"),
+    # POWER9 (ppc64le): native build/test on a POWER9 node, see build_p9.sh.
+    # conda-forge binaries; 3.11 is the jupyter-slurm numpy 1 stack.
+    ("3.8", "snakepit-p9.sif"),
+    ("3.11", "snakepit-p9.sif"),
+    ("3.12", "snakepit-p9.sif"),
+    ("3.13", "snakepit-p9.sif"),
+    ("3.14", "snakepit-p9.sif"),
+    ("3.14t", "snakepit-p9.sif"),
+    ("3.15", "snakepit-p9.sif"),
+    # aarch64 (QEMU user-mode emulation required for build/test)
     ("3.11", "ubuntu24.04_aarch64.sif"),
     # PyPy containers (cpython-compatible cpyext ABI testing)
     ("pypy2.7", "snakepit-legacy.sif"),
@@ -78,6 +87,24 @@ PYTHON_VERSIONS = [
 
 
 
+
+
+# Images that are not x86_64. Entries whose image doesn't match this host's
+# architecture, or whose .sif isn't built, are skipped (not failed).
+IMAGE_ARCH = {
+    "snakepit-p9.sif": "ppc64le",
+    "ubuntu24.04_aarch64.sif": "aarch64",
+}
+
+
+def skip_reason(sif_file):
+    """Why this image can't be tested here, or None."""
+    arch = IMAGE_ARCH.get(sif_file, "x86_64")
+    if arch != platform.machine():
+        return arch + " image on " + platform.machine() + " host"
+    if not (SCRIPT_DIR / sif_file).exists():
+        return "not built"
+    return None
 
 
 # Versions tested as a bare interpreter (venv + stdlib only, no packages):
@@ -254,6 +281,10 @@ def main():
         # collapse those into a single result.
         results = {}
         for python_version, sif_file in PYTHON_VERSIONS:
+            reason = skip_reason(sif_file)
+            if reason:
+                print_step("SKIP " + python_version + " (" + sif_file + "): " + reason)
+                continue
             success = test_python_version(python_version, sif_file)
             results[(python_version, sif_file)] = success
 
