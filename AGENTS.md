@@ -1,276 +1,43 @@
-# Snakepit Project Context for AI Agents
+# Notes for agents
 
-## 7-Bit ASCII Encoding Requirement
+Read `README.md` first: images, build, test, rules.
 
-**IMPORTANT**: All source files in this repository MUST use only 7-bit ASCII encoding (bytes 0-127). 
+## Rules
 
-### Rationale
-- Ensures maximum compatibility with legacy systems and HPC environments
-- Prevents encoding issues in container environments
-- Simplifies cross-platform text processing
+- 7-bit ASCII only in every file (no emoji, arrows, smart quotes, em
+  dashes). Check with:
+  `python3 -c "import sys;[sys.exit('NON-ASCII '+f) for f in sys.argv[1:] if any(b>127 for b in open(f,'rb').read())]" FILES`
+- Do not compile upstream packages. Use existing binaries (PyPI wheels, silx
+  wheelhouse, scientific-python nightlies, conda-forge); install with
+  `--only-binary :all:`. If no binary exists, skip the package or test the
+  interpreter bare. Compile only to test a git head that has no nightly.
+- Test code (`test_extension/`) must run on Python 2.7: no f-strings, use
+  `from __future__ import print_function`.
+- Build images in local `/tmp`, test them, then move them into the checkout.
+  POWER9: `sbatch build_p9.sh` (do not use QEMU for ppc64le).
 
-### What This Means
+## Pitfalls
 
-**DO NOT USE:**
-- Unicode characters (emoji, special symbols, smart quotes, box-drawing chars)
-- Non-ASCII accented characters
-- Unicode arrows, checkmarks, mathematical symbols, etc.
+- Apptainer mounts `$HOME`: set `PYTHONNOUSERSITE=1`, and pass an absolute
+  interpreter path to `uv venv --python`.
+- PyPy 3.11 must stay at PyPy 7.3.x (`pypy-3.11.15`); PyPy 8 is ABI pp80 and
+  has no numpy wheels.
+- PyPy and CPython 2.7 share `snakepit-legacy.sif`; `build_extension.sh`
+  checks the implementation before choosing headers, and links PyPy against
+  `libpypy*-c.so`.
 
-**EXAMPLES OF WHAT TO REPLACE:**
-- checkmark symbol -> `[OK]` or `OK`
-- cross/multiplication symbol -> `[FAIL]` or `FAIL`
-- arrow symbol -> `>>` or `-->`
-- snake emoji -> remove or spell out `snake`
-- box-drawing chars (e.g. tree branches) -> `|--`, `` `--`
-- em dash -> `-` (hyphen)
-- smart quotes -> `"` (regular quotes)
+## Adding a Python version
 
-### Files Modified for ASCII Compliance
-- README.md: Removed emoji, replaced checkmarks with [OK]
-- SUMMARY.md: Box-drawing characters --> ASCII tree format
-- specification.md: Box-drawing characters --> ASCII format
-- test_images.py: Unicode symbols --> ASCII markers
-- test_results.log: Unicode symbols --> ASCII markers
+1. Add the interpreter to the `.def` (from a binary source) and to the
+   `install_sci_packages.sh` call in its `%post`.
+2. Add `("3.X", "<image>.sif")` to `PYTHON_VERSIONS` in `test_images.py`
+   (and to `BARE_VERSIONS` if numpy has no wheel yet).
+3. Rebuild, run `python3 test_images.py`, update the README table.
 
-### Verification
+## Files
 
-To verify ASCII compliance:
-```bash
-python3 << 'EOF'
-import os
-with open('filename.txt', 'rb') as f:
-    content = f.read()
-    non_ascii = [b for b in content if b > 127]
-    if non_ascii:
-        print("Contains non-ASCII bytes")
-    else:
-        print("7-bit ASCII compliant")
-EOF
-```
-
-## Project Overview
-
-Snakepit is a multi-Python Apptainer container testing suite for scientific Python C extensions.
-
-### Quick Commands
-
-### Native (x86_64) Containers
-
-Build containers (no sudo required - uses fakeroot):
-```bash
-apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
-apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
-apptainer build --fakeroot snakepit-manylinux_2_28.sif snakepit-manylinux_2_28.def
-apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
-```
-
-Four containers (consolidated from an earlier six -- see git history).
-Every interpreter is a binary from a package manager (apt, deadsnakes PPA,
-uv/python-build-standalone, or pypy.org) -- never compiled from source here.
-
-### Cross-Architecture Containers (ppc64le / aarch64)
-
-ppc64le (POWER9) and aarch64 (ARM64) are handled differently.
-
-**POWER9 (native)**: `snakepit-p9.sif` is built and tested **natively** on a
-POWER9 node -- no QEMU. One command from the snakepit checkout:
-
-```bash
-sbatch build_p9.sh        # from the checkout, on any host with Slurm access
-```
-
-`build_p9.sh` submits to the `low-p9gpu` partition. What the job does:
-- builds `snakepit-p9.sif` in node-local `/tmp` (a `mktemp -d` work dir, with
-  `APPTAINER_TMPDIR`/`APPTAINER_CACHEDIR` under it),
-- runs `test_images.py` there (only the ppc64le entries run; entries for
-  another architecture or an unbuilt image are skipped, not failed),
-- copies `snakepit-p9.sif` and `test_results_p9.log` into the checkout only
-  if every test passes, and **always** removes the `/tmp` work directory.
-
-Because `$HOME` is shared NFS with x86, the job writes results straight back
-into the checkout. This needs a POWER9 (ppc64le) node; no `qemu-user-static`
-or binfmt_misc handlers required.
-
-**aarch64 (QEMU)**: `ubuntu24.04_aarch64.sif` is still a QEMU user-mode
-emulation build (Python 3.11 smoke test) until an ARM machine is available.
-Requires `qemu-user-static` on the build host.
-
-**Sysadmin setup** (one-time, QEMU only):
-```bash
-# Debian/Ubuntu host:
-sudo apt-get install -y qemu-user-static
-
-# RHEL/CentOS/Fedora host:
-sudo dnf install -y qemu-user-static
-
-# Verify binfmt_misc handlers are registered:
-ls /proc/sys/fs/binfmt_misc/ | grep qemu
-# Should show: qemu-aarch64  (among others)
-```
-
-**Build command (aarch64 only)** (the --arch flag tells Apptainer which Docker image variant to pull):
-```bash
-apptainer build --fakeroot --arch arm64 ubuntu24.04_aarch64.sif ubuntu24.04_aarch64.def
-```
-
-**How QEMU works**: QEMU user-mode + kernel binfmt_misc handlers translate foreign
-architecture binaries transparently. Apptainer's `--arch` flag selects the matching
-Docker image variant. Both build-time (%post scripts) and runtime (`apptainer exec`)
-are emulated -- no native hardware required.
-
-Test a Python version:
-```bash
-./test_in_container.sh python3.11 snakepit-manylinux2014.sif
-```
-
-### Supported Python Versions
-- **snakepit-legacy.sif** (Ubuntu 18.04): Python 2.7, 3.6, 3.7 (native apt), 3.8 (uv prebuilt),
-  PyPy 2.7 (pypy.org tarball), PyPy 3.9 (uv prebuilt)
-- **snakepit-manylinux2014.sif** (CentOS 7, glibc 2.17): Python 3.9, 3.10, 3.11
-  -- **tested versions only**. The image also ships 3.12 and 3.13 interpreters
-  (pre-built in the upstream pypa image) that do have numpy (2.2.6 still has
-  manylinux2014 wheels for cp312/cp313) and h5py 3.14.0, but those two are
-  NOT in the test matrix; 3.14 and 3.14t/3.15/3.15t have no manylinux2014
-  wheels at all. The base image's PyPy 3.11 is still present but has no
-  numpy here (numpy's pp311 wheels need glibc >= 2.28); PyPy 3.11 is
-  tested in `snakepit-manylinux_2_28.sif` and `snakepit-modern.sif`. Use
-  `snakepit-manylinux_2_28.sif` or `snakepit-modern.sif` for 3.12+ and
-  free-threading; 3.16/3.16t are only in `snakepit-modern.sif`.
-- **snakepit-manylinux_2_28.sif** (AlmaLinux 8, glibc 2.28): Python 3.9, 3.10,
-  3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, PyPy 3.11 (7.3.23) -- all
-  tested. Built from quay.io/pypa/manylinux_2_28_x86_64. This is the current
-  wheel floor of the scientific stack (numpy >= 2.3, h5py >= 3.15,
-  cibuildwheel >= 3). No 3.16/3.16t (not in the pypa base image yet).
-  Downstream wheels still tagged manylinux2014 (e.g. bslz4_to_sparse,
-  c2ImageD11 x86_64) should be tested on both this and
-  `snakepit-manylinux2014.sif`.
-- **snakepit-modern.sif** (Ubuntu 24.04): Python 3.9, 3.10, 3.11, 3.13, 3.14, 3.15
-  (deadsnakes PPA), 3.12 (native default), 3.16 (deadsnakes PPA, alpha),
-  3.14t, 3.15t, 3.16t (uv prebuilt free-threading), PyPy 3.11 (uv prebuilt,
-  pinned to pypy-3.11.15 = PyPy 7.3.23). 3.9/3.10/3.11 are tested here *and*
-  in `snakepit-manylinux2014.sif` on purpose -- the original six-container
-  design tested those three versions against both a modern and an old glibc
-  baseline, and this preserves that.
-- **snakepit-p9.sif** (Ubuntu 24.04 + micromamba, conda-forge): Python 3.8,
-  3.11, 3.12, 3.13, 3.14, 3.15, 3.14t -- one conda-forge environment per
-  Python, exposed as `python3.X`; all have prebuilt numpy/h5py/numba (PyPI has
-  no ppc64le wheels for them, so conda-forge is the binary source). 3.11 is
-  numpy 1 (3.11.6, numpy 1.24.4, h5py 3.10.0, numba 0.57.1 -- the ESRF
-  `module load jupyter-slurm` 2023.10.x stack) and 3.8 is also numpy 1; the
-  rest are numpy 2. Built and tested natively on a POWER9 node (see `build_p9.sh`).
-- **ubuntu24.04_aarch64.sif**: Python 3.11 (ARM64 / aarch64, QEMU build)
-
-**Fixed issue**: putting PyPy 2.7 in the same container as native CPython 2.7
-(`snakepit-legacy.sif`) exposed a bug in `test_extension/build_extension.sh`: its
-header-path fallback picked up CPython's `/usr/include/python2.7` before
-trying PyPy's own include dir, since both now coexist in one container.
-Fixed by checking `platform.python_implementation()` first and giving PyPy
-its own header/link path (it also needs an explicit `-lpypy-c` link with an
-rpath, unlike CPython). See `specification.md` under "PyPy 2.7".
-
-**Note: Python 3.16** is in alpha (3.16.0a1 on deadsnakes noble, a2 via uv as of
-2026-11). `snakepit-modern.def` installs 3.16/3.16t optionally; beta 1 is expected
-May 2027. Until numpy/h5py/numba publish cp316 wheels, 3.16/3.16t are tested as
-bare interpreters (`BARE_VERSIONS` in `test_images.py`: venv + stdlib only).
-
-**Rule: compiling upstream packages is a smell.** `run_tests.sh` installs
-numpy/h5py/numba with `--only-binary :all:`. Prefer existing binaries (PyPI
-wheels, the silx wheelhouse, scientific-python nightlies, conda-forge); compile
-only to test git heads that have no nightly. If a package has no wheel for an
-interpreter, it is skipped (h5py, numba) or that version is tested bare (numpy).
-Pre-release *wheels* are allowed:
-3.15/3.15t take h5py from the scientific-python nightly wheel index until
-h5py 3.17.0 ships cp315 wheels (h5py issue #2993). 3.16t has no h5py wheel at
-all, and numpy has no cp316 wheels even as nightlies, so 3.16/3.16t stay bare.
-
-**Preinstalled packages**: `install_sci_packages.sh` (run at build time) puts
-numpy/numba/h5py wheels into every interpreter's system site-packages; see
-`/opt/snakepit/packages.txt` in each image for what is present ("-" = no wheel).
-Downstream opts in with `venv --system-site-packages` (or `virtualenv`/`uv venv`
-with the same flag), or uses a plain venv to ignore them. Apptainer mounts
-$HOME, so: set `PYTHONNOUSERSITE=1` (else ~/.local/lib/pythonX.Y packages
-shadow the image's) and give `uv venv --python` an absolute interpreter path
-(else uv may pick a Python from the host's ~/.local/share/uv). `run_tests.sh`
-does both. PyPy 2.7 and 3.16/3.16t have no numpy wheels and are tested as bare
-interpreters (see `BARE_VERSIONS` in `test_images.py`); PyPy 3.11 in
-`snakepit-modern.sif` does have numpy 2.4.6 and passes the matrix.
-
-### Key Files
-- `snakepit-legacy.def` / `snakepit-manylinux2014.def` / `snakepit-manylinux_2_28.def` / `snakepit-modern.def` / `snakepit-p9.def`: Apptainer container definitions
-- `ubuntu24.04_aarch64.def`: Cross-architecture definition (QEMU)
-- `build_p9.sh`: One-command native POWER9 build + test (`sbatch build_p9.sh`)
-- `test_numpy_abi.sh`: numpy 1 vs 2 extension ABI check (x86_64)
-- `test_in_container.sh`: Primary test runner script
-- `test_extension/`: Example C extension with NumPy f2py
-- `test_images.py`: Automated container test suite
-- `SKILL.md`: Detailed container usage guide for AI agents
-
-### Architecture
-- Apptainer definitions use fakeroot for non-root container building
-- Tests are Python 2.7-3.16 compatible (no f-strings, `from __future__ import`)
-- Single `requirements.txt` with Python version markers handles all package versions
-
-## Contributing Guidelines
-
-When adding or modifying files:
-1. **Always use 7-bit ASCII encoding** - no unicode characters
-2. Keep container definitions minimal and focused on build/runtime requirements
-3. Test across all supported Python versions: `python test_images.py`
-4. Update README.md if adding new features
-5. Maintain backward compatibility with Python 2.7 in test code
-
-## Testing
-Run all tests:
-```bash
-python3 test_images.py
-```
-
-`test_images.py` runs the (version, container) pairs in `PYTHON_VERSIONS`.
-Entries whose image is a different architecture than the current host, or
-whose `.sif` is not built, are skipped (not failed). Results are logged to
-`test_results.log`. For the numpy 1 vs numpy 2 ABI check:
-`sbatch test_numpy_abi.sh` or `srun -p nice bash test_numpy_abi.sh` (see
-README "numpy 1 vs numpy 2").
-
-## Notes for LLM/AI Agents
-
-- Prefer conciseness in comments; avoid redundant documentation
-- Keep functions focused and minimal
-- Test code should work identically across Python 2.7-3.16
-- Use `from __future__ import print_function` for Python 2.7 compatibility
-- No f-strings in any Python code that must support Python 2.7
-- PyPy uses `virtualenv` (not `venv`); `ensurepip` bootstraps pip on PyPy
-- See `SKILL.md` for a detailed walkthrough of using these containers, including build commands, testing, and adding new Python versions.
-
-## Container Usage Quick Reference
-
-### Build Containers
-```bash
-apptainer build --fakeroot <name>.sif <name>.def
-```
-
-### Run a Command
-```bash
-apptainer exec <image>.sif python3.X -c "print('hello')"
-```
-
-### Interactive Shell with Volume Mount
-```bash
-apptainer exec --bind $(pwd):/workspace <image>.sif bash
-```
-
-### Test a Python Version
-```bash
-./test_in_container.sh python3.X <image>.sif
-```
-
-### Run Full Test Suite
-```bash
-python3 test_images.py
-```
-
-### Add a New Python Version (4-Step Checklist)
-1. Add `python3.X python3.X-dev python3.X-venv` to the `.def` file's apt install block
-2. Add `("3.X", "<container>.sif")` to `PYTHON_VERSIONS` in `test_images.py`
-3. Rebuild the container: `apptainer build --fakeroot <container>.sif <container>.def`
-4. Run the test suite: `python3 test_images.py`
+- `snakepit-*.def`: image definitions; `install_sci_packages.sh`: installs
+  numpy/numba/h5py and writes `/opt/snakepit/packages.txt`
+- `build_p9.sh`: POWER9 build and test job
+- `test_images.py`, `test_in_container.sh`, `test_extension/`: tests
+- `test_numpy_abi.sh`: numpy 1 / numpy 2 ABI check

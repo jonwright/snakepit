@@ -21,7 +21,7 @@ LOG_FILE = SCRIPT_DIR / "test_results.log"
 # Python versions to test
 # Format: (version, sif_file)
 #
-# Four x86_64 containers (see AGENTS.md/MIGRATION.md):
+# x86_64 containers (see README.md):
 #   snakepit-legacy.sif       Ubuntu 18.04: 2.7, 3.6, 3.7 (native apt) + 3.8 (uv prebuilt)
 #                    + PyPy 2.7 (pypy.org tarball), PyPy 3.9 (uv prebuilt)
 #   snakepit-manylinux2014.sif  CentOS 7 (glibc 2.17), pypa-maintained: 3.9-3.11 tested
@@ -193,7 +193,7 @@ def test_python_version(python_version, sif_file):
     
     Runs a single Apptainer command that:
     1. Creates virtual environment
-    2. Installs packages from requirements.txt (handles version dependencies)
+    2. Uses the preinstalled packages (or installs wheels with SNAKEPIT_TEST_MODE=fresh)
     3. Builds C extension with f2py
     4. Runs uniform test script
     """
