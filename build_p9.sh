@@ -51,5 +51,7 @@ fi
 grep -E "^\[OK\] Python|Results:" run.log
 
 cp test_results.log "$REPO/test_results_p9.log"
-cp "$WORK/snakepit-p9.sif" "$REPO/snakepit-p9.sif.new" && mv -f "$REPO/snakepit-p9.sif.new" "$REPO/snakepit-p9.sif"
-echo "installed $REPO/snakepit-p9.sif"
+# If snakepit-p9.sif is a symlink (e.g. to an image store), replace its target.
+DEST=$(readlink -f "$REPO/snakepit-p9.sif")
+cp "$WORK/snakepit-p9.sif" "$DEST.new" && mv -f "$DEST.new" "$DEST"
+echo "installed $DEST"

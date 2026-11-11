@@ -79,7 +79,7 @@ sbatch build_p9.sh
 
 It builds in node-local `/tmp`, runs `test_images.py`, and copies
 `snakepit-p9.sif` and `test_results_p9.log` into the checkout only if every
-test passes.
+test passes. If `snakepit-p9.sif` is a symlink, its target is replaced.
 
 ## Test
 

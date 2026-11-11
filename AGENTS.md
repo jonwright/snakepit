@@ -13,8 +13,10 @@ Read `README.md` first: images, build, test, rules.
   interpreter bare. Compile only to test a git head that has no nightly.
 - Test code (`test_extension/`) must run on Python 2.7: no f-strings, use
   `from __future__ import print_function`.
-- Build images in local `/tmp`, test them, then move them into the checkout.
-  POWER9: `sbatch build_p9.sh` (do not use QEMU for ppc64le).
+- Images are stored in `/data/id11/jon/snakepit` (GPFS) and symlinked from
+  the checkout; `$HOME` is NFS with little space. Build in local `/tmp`, test,
+  then copy the image there. POWER9: `sbatch build_p9.sh` (no QEMU for
+  ppc64le); it writes through the symlink.
 
 ## Pitfalls
 
