@@ -2,7 +2,7 @@
 
 ## What We Built
 
-A Docker/Apptainer-based testing environment for Python C extensions that works **uniformly** across Python 2.7 through 3.15 (including free-threading 3.14t, 3.15t) with **no special-casing**.
+A Docker/Apptainer-based testing environment for Python C extensions that works **uniformly** across Python 2.7 through 3.16 (including free-threading 3.14t, 3.15t, 3.16t) with **no special-casing**.
 
 ## Key Improvements
 
@@ -28,7 +28,7 @@ numba ; python_version >= "3"
 **After**: Single `test_uniform.py` that runs unchanged on ALL Python versions
 - Uses `from __future__ import print_function`
 - No f-strings
-- Works identically from Python 2.7 to 3.15
+- Works identically from Python 2.7 to 3.16
 
 ### 3. Simplified Test Runner [OK]
 
@@ -52,38 +52,69 @@ Users can think of it as: "Run this script with this Python version"
 
 The Apptainer container just provides the Python interpreter and build tools.
 
-## Test Results
+## Preinstalled Packages
 
-All Python versions tested successfully:
+Every image preinstalls numpy/numba/h5py wheels into each interpreter's
+system site-packages at build time. The manifest written by
+`install_sci_packages.sh` at `/opt/snakepit/packages.txt` (shown below, with
+each image's size in MB) says what is actually present -- `-` means no wheel
+for that interpreter. Downstream opts in with `venv --system-site-packages`,
+or uses a plain venv to ignore the image's packages.
 
-| Python Version | NumPy Version | h5py Version | numba Version | Status |
-|----------------|---------------|--------------|---------------|---------|
-| 2.7            | 1.16.6        | 2.10.0       | 0.45.0        | [OK] PASSED |
-| 3.8            | 1.24.4        | 3.11.0       | 0.58.1        | [OK] PASSED |
-| 3.9            | 2.0.2         | 3.14.0       | 0.60.0        | [OK] PASSED |
-| 3.10           | 2.2.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
-| 3.11           | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
-| 3.12           | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
-| 3.13           | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
-| 3.14           | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
-| 3.14t          | 2.4.6         | 3.16.0       | 0.65.1        | [OK] PASSED |
-| 3.15           | 2.4.6         | 3.16.0       | N/A           | [OK] PASSED |
-| 3.15t          | 2.4.6         | 3.16.0       | N/A           | [OK] PASSED |
-| 3.9 (manylinux) | 2.0.2        | 3.14.0       | 0.60.0        | [OK] PASSED |
-| 3.10 (manylinux) | 2.2.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
-| 3.11 (manylinux) | 2.4.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
-| 3.12 (manylinux) | 2.4.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
-| 3.13 (manylinux) | 2.4.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
-| 3.14 (manylinux) | 2.4.6       | N/A [1]      | 0.65.1        | [OK] PASSED |
+### `snakepit-legacy.sif` (668 MB, 700854272 bytes)
 
-[1] h5py not available on manylinux2014 due to CentOS 7 HDF5 1.8.12 being too old for building from source, and no binary wheel being available.
+| Interpreter | Python | NumPy | numba | h5py |
+|---|---|---|---|---|
+| python2.7 | 2.7.17 | 1.16.6 | 0.47.0 | 2.10.0 |
+| python3.6 | 3.6.9 | 1.19.5 | 0.53.1 | 3.1.0 |
+| python3.7 | 3.7.5 | 1.21.6 | 0.56.4 | 3.8.0 |
+| python3.8 | 3.8.20 | 1.24.4 | 0.58.1 | 3.11.0 |
+| pypy2.7 | 2.7.18 | - | - | - |
+| pypy3.9 | 3.9.19 | 2.0.2 | - | - |
 
-**Note (historical)**: this table predates numpy dropping `manylinux2014`-tagged
-wheels for cp312+. As of the current containers (`snakepit-legacy.sif` / `snakepit-manylinux2014.sif`
-/ `snakepit-modern.sif`), the "3.12/3.13/3.14 (manylinux)" rows above no longer pass --
-`pip install numpy` fails there today (no compatible wheel, and the image's
-GCC 10.2 can't build numpy from source). Those versions are tested in
-`snakepit-modern.sif` instead. See `specification.md` under "manylinux2014" for details.
+### `snakepit-manylinux2014.sif` (584 MB, 612593664 bytes)
+
+| Interpreter | Python | NumPy | numba | h5py |
+|---|---|---|---|---|
+| python3.9 | 3.9.25 | 2.0.2 | 0.60.0 | 3.14.0 |
+| python3.10 | 3.10.22 | 2.2.6 | 0.67.0 | 3.14.0 |
+| python3.11 | 3.11.18 | 2.2.6 | 0.67.0 | 3.14.0 |
+| python3.12 | 3.12.16 | 2.2.6 | 0.67.0 | 3.14.0 |
+| python3.13 | 3.13.18 | 2.2.6 | 0.67.0 | 3.14.0 |
+| python3.14 | 3.14.10 | - | - | - |
+| python3.14t | 3.14.10 | - | - | - |
+| python3.15 | 3.15.2 | - | - | - |
+| python3.15t | 3.15.2 | - | - | - |
+| pypy3.11 | 3.11.15 | - | - | - |
+
+### `snakepit-modern.sif` (747 MB, 783081472 bytes)
+
+| Interpreter | Python | NumPy | numba | h5py |
+|---|---|---|---|---|
+| python3.9 | 3.9.25 | 2.0.2 | 0.60.0 | 3.14.0 |
+| python3.10 | 3.10.22 | 2.2.6 | 0.68.1 | 3.16.0 |
+| python3.11 | 3.11.18 | 2.4.6 | 0.68.1 | 3.16.0 |
+| python3.12 | 3.12.3 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.13 | 3.13.18 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.14 | 3.14.10 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.15 | 3.15.2 | 2.5.4 | 0.68.1 | 3.17.0.dev0 |
+| python3.16 | 3.16.0a1 | - | - | - |
+| python3.14t | 3.14.10 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.15t | 3.15.2 | 2.5.4 | - | 3.17.0.dev0 |
+| python3.16t | 3.16.0a1 | - | - | - |
+| pypy3.11 | 3.11.15 | 2.4.6 | - | - |
+
+Only wheels are ever installed -- no upstream package is built from source.
+3.15/3.15t h5py (3.17.0.dev0) comes from the scientific-python nightly wheel
+index until h5py 3.17.0 ships cp315 wheels. 3.16/3.16t and pypy2.7 have no
+numpy/numba/h5py wheels and are tested as bare interpreters.
+
+Test matrix (2026-11-11): all 21 entries run against
+`snakepit-legacy.sif`, `snakepit-manylinux2014.sif` and `snakepit-modern.sif`
+pass (3.16, 3.16t and pypy2.7 as bare interpreters); the 2 cross-architecture
+entries were skipped because those images were not built. PyPy 3.11 is
+tested in `snakepit-modern.sif`, no longer in `snakepit-manylinux2014.sif`
+(numpy's pp311 wheels need glibc >= 2.28).
 
 
 ## What Gets Tested
@@ -105,7 +136,7 @@ test_extension/
 |-- build_extension.sh  # Build script
 |-- requirements.txt    # Version-conditional dependencies
 |-- run_tests.sh        # Unified test runner
-`-- test_uniform.py     # Python 2.7-3.15 compatible test code (incl. free-threading)
+`-- test_uniform.py     # Python 2.7-3.16 compatible test code (incl. free-threading)
 ```
 
 ## Usage Examples

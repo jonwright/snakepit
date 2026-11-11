@@ -2,7 +2,7 @@
 
 ## Overview
 
-Snakepit provides pre-built Apptainer containers with multiple Python versions for testing scientific Python C extensions. The containers bundle Python interpreters (2.7 through 3.15), build tools (gcc, make), and development headers so you can compile and test C extensions without installing anything on the host.
+Snakepit provides pre-built Apptainer containers with multiple Python versions for testing scientific Python C extensions. The containers bundle Python interpreters (2.7 through 3.16), build tools (gcc, make), and development headers so you can compile and test C extensions without installing anything on the host.
 
 This guide teaches you (an LLM/AI agent) how to use these containers effectively.
 
@@ -17,15 +17,15 @@ This guide teaches you (an LLM/AI agent) how to use these containers effectively
 | Image File | Base OS | Python Versions | Where They Come From |
 |------------|---------|-----------------|---------------------|
 | `snakepit-legacy.sif` | Ubuntu 18.04 (Bionic) | 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 | native apt (2.7/3.6/3.7) + uv (3.8, PyPy 3.9) + pypy.org tarball (PyPy 2.7) |
-| `snakepit-manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11, PyPy 3.11 (tested) | manylinux2014 image (GCC 10). Also ships 3.12-3.15/3.14t/3.15t interpreters, but those aren't tested -- see note below |
-| `snakepit-modern.sif` | Ubuntu 24.04 | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | deadsnakes PPA (3.9-3.11, 3.13-3.15) + native apt (3.12) + uv (3.14t, 3.15t) |
+| `snakepit-manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11 (tested) | manylinux2014 image (GCC 10). Also ships 3.12/3.13 (which have numpy/h5py wheels) but those aren't tested, and 3.14+/3.14t/3.15/3.15t with no wheels -- see note below |
+| `snakepit-modern.sif` | Ubuntu 24.04 | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, 3.16 (alpha), 3.16t, PyPy 3.11 | deadsnakes PPA (3.9-3.11, 3.13-3.16) + native apt (3.12) + uv (3.14t, 3.15t, 3.16t, PyPy 3.11) |
 
 **Why manylinux2014 stops at 3.11 for real testing**: numpy no longer
-publishes `manylinux2014`-tagged wheels for cp312+ (its own wheel baseline
-moved to `manylinux_2_28`), and this CentOS 7 image's GCC 10.2 can't build
-numpy from source either (numpy's meson build requires GCC >= 10.3, and no
-newer devtoolset was ever published for CentOS 7's SCL repo). `snakepit-modern.sif`'s
-newer glibc/GCC is what actually tests 3.12+.
+publishes `manylinux2014`-tagged wheels for cp314+ (its own wheel baseline
+moved to `manylinux_2_28`). The image still carries 3.12/3.13, and numpy
+2.2.6 does have manylinux2014 wheels for cp312/cp313, but those two are not
+in the test matrix; 3.14 and 3.14t/3.15/3.15t have no wheels at all.
+`snakepit-modern.sif`'s newer glibc is what actually tests 3.12+.
 
 **Why 3.9/3.10/3.11 are in both containers**: this is intentional, not
 duplication left over from the consolidation. The original six-container
@@ -71,6 +71,19 @@ pip install numpy
 ```
 
 **Important**: Create venvs on the mounted volume (`/workspace`) so they persist after the container exits.
+
+**Preinstalled packages**: each image bundles numpy/numba/h5py wheels in each
+interpreter's system site-packages (see `/opt/snakepit/packages.txt` and the
+manifests in `SUMMARY.md`). Use `--system-site-packages` to pick them up; a
+plain venv ignores them. Apptainer mounts `$HOME`, so set `PYTHONNOUSERSITE=1`
+(else the host's `~/.local/lib/pythonX.Y` shadow them) and give `uv venv
+--python` an absolute interpreter path (else uv may pick a Python from the
+host's `~/.local/share/uv`):
+
+```bash
+apptainer exec snakepit-modern.sif bash -c \
+  'python3.12 -m venv --system-site-packages v && PYTHONNOUSERSITE=1 v/bin/python -c "import numpy"'
+```
 
 ### 4. Build a C Extension with f2py
 
@@ -206,7 +219,7 @@ All source files in this repo must use only 7-bit ASCII. No Unicode, emoji, or n
 | `test_extension/` | Example C extension + test code |
 | `test_extension/run_tests.sh` | In-container test orchestrator |
 | `test_extension/build_extension.sh` | f2py C extension build script |
-| `test_extension/test_uniform.py` | Python 2.7-3.15 compatible test code |
+| `test_extension/test_uniform.py` | Python 2.7-3.16 compatible test code |
 | `test_extension/requirements.txt` | Version-conditional pip dependencies |
 | `test_results.log` | Test output log |
 

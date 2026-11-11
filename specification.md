@@ -33,12 +33,14 @@ or pypy.org) -- never compiled from source by this repo.
 - **Python 3.9, 3.10, 3.11** (pre-installed in manylinux2014 Docker image at
   `/opt/python/`) -- the old-glibc leg of these versions' dual-glibc testing
   (see Image 3); also tested against a modern glibc in `snakepit-modern.sif`
-- **PyPy 3.11** (also pre-installed, tested here)
-- Also ships 3.12-3.15, 3.14t, 3.15t interpreters, but they are NOT in the
-  test matrix: numpy no longer publishes manylinux2014 (glibc 2.17) wheels
-  for cp312+, and this CentOS 7 image's GCC 10.2 can't build numpy from
-  source either (numpy's meson build requires GCC >= 10.3). See "manylinux2014"
-  under Compatibility Notes.
+- Also ships 3.12 and 3.13 interpreters (pre-built in the upstream pypa
+  image), which do have numpy (2.2.6 still has manylinux2014 wheels for
+  cp312/cp313) and h5py 3.14.0, but those two are NOT in the test matrix.
+  3.14 and 3.14t/3.15/3.15t are present too but have no manylinux2014 wheels
+  at all. See "manylinux2014" under Compatibility Notes.
+- PyPy 3.11 from the pypa base image is still present but untested here:
+  numpy's pp311 wheels need glibc >= 2.28, so it is tested in
+  `snakepit-modern.sif` instead.
 - Oldest glibc (2.17) for maximum binary compatibility testing
 - GCC 10 toolchain (devtoolset-10) with gfortran for f2py
 
@@ -50,7 +52,12 @@ or pypy.org) -- never compiled from source by this repo.
 - **Python 3.12** (Ubuntu 24.04's own default python3)
 - **Python 3.13, 3.14, 3.15** (deadsnakes PPA -- noble builds; 3.15 tracks
   latest beta/rc/final)
-- **Python 3.14t, 3.15t** (free-threading/no-GIL, from uv python-build-standalone)
+- **Python 3.16** (deadsnakes PPA -- noble; 3.16.0a1 alpha, installed
+  optionally so a PPA gap doesn't fail the build)
+- **Python 3.14t, 3.15t, 3.16t** (free-threading/no-GIL, from
+  uv/python-build-standalone)
+- **PyPy 3.11** (uv prebuilt; pinned to pypy-3.11.15 = PyPy 7.3.23, the last
+  7.3.x/ABI pp73, because PyPy 8.x is ABI pp80 and numpy has no pp80 wheels)
 - Modern glibc (2.39) means numpy/h5py/numba install as real wheels here with
   no source build needed -- this is what manylinux2014 can no longer do for
   3.12+.
@@ -75,11 +82,11 @@ Mount your local workspace into the container at `/workspace`:
 apptainer exec --bind /path/to/your/project:/workspace \
   snakepit-legacy.sif bash
 
-# For Python 3.9, 3.10, 3.11, PyPy 3.11 (manylinux2014, CentOS 7)
+# For Python 3.9, 3.10, 3.11 (manylinux2014, CentOS 7)
 apptainer exec --bind /path/to/your/project:/workspace \
   snakepit-manylinux2014.sif bash
 
-# For Python 3.9-3.15, 3.14t, 3.15t (Ubuntu 24.04)
+# For Python 3.9-3.16, 3.14t, 3.15t, 3.16t, PyPy 3.11 (Ubuntu 24.04)
 apptainer exec --bind /path/to/your/project:/workspace \
   snakepit-modern.sif bash
 ```
@@ -131,7 +138,7 @@ apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
 # Build manylinux2014 container (Python 3.9-3.11 tested, PyPy 3.11)
 apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
 
-# Build modern container (Python 3.9-3.15, 3.14t, 3.15t)
+# Build modern container (Python 3.9-3.16, 3.14t, 3.15t, 3.16t)
 apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
 
@@ -144,7 +151,7 @@ Apptainer runs as a non-root user by default, which means files created inside t
 
 ## Testing
 
-The repository includes a comprehensive test suite with **uniform code** that works across all Python versions (2.7-3.15).
+The repository includes a comprehensive test suite with **uniform code** that works across all Python versions (2.7-3.16).
 
 ### Key Testing Features
 
@@ -210,7 +217,7 @@ apptainer build --fakeroot snakepit-legacy.sif snakepit-legacy.def
 # Build manylinux2014 container (Python 3.9-3.11 tested, PyPy 3.11)
 apptainer build --fakeroot snakepit-manylinux2014.sif snakepit-manylinux2014.def
 
-# Build modern container (Python 3.9-3.15, 3.14t, 3.15t)
+# Build modern container (Python 3.9-3.16, 3.14t, 3.15t, 3.16t)
 apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
 
@@ -224,13 +231,14 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
 - **Python 3.8**: [uv](https://github.com/astral-sh/uv) / python-build-standalone
   prebuilt binary -- deadsnakes no longer builds for bionic/focal, and no distro
   ships 3.8 natively anymore
-- **Python 3.9, 3.10, 3.11, 3.13, 3.14, 3.15 (in `snakepit-modern.sif`)**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) (noble builds)
+- **Python 3.9, 3.10, 3.11, 3.13, 3.14, 3.15, 3.16 (in `snakepit-modern.sif`)**: [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) (noble builds)
 - **Python 3.12**: Ubuntu 24.04's own default python3 (native apt)
-- **Python 3.14t, 3.15t**: uv / python-build-standalone prebuilt free-threading binaries
+- **Python 3.14t, 3.15t, 3.16t**: uv / python-build-standalone prebuilt free-threading binaries
 - **Python 3.9-3.11 (in `snakepit-manylinux2014.sif`, old-glibc leg)**: Pre-installed in [quay.io/pypa/manylinux2014_x86_64](https://quay.io/repository/pypa/manylinux2014_x86_64) Docker image
 - **PyPy 2.7**: [pypy.org](https://www.pypy.org/download.html) portable tarball (final release)
 - **PyPy 3.9**: uv prebuilt binary
-- **PyPy 3.11**: pre-installed in the manylinux2014 image
+- **PyPy 3.11**: uv prebuilt (pinned to pypy-3.11.15 = PyPy 7.3.23; see
+  `snakepit-modern.def`), in `snakepit-modern.sif`
 
 ### Why Three Images?
 
@@ -276,7 +284,7 @@ The build system uses `distutils.sysconfig.get_python_inc()` to correctly locate
 
 VERSIONS_LEGACY="2.7 3.6 3.7 3.8"
 VERSIONS_MANYLINUX="3.9 3.10 3.11"
-VERSIONS_MODERN="3.12 3.13 3.14 3.14t 3.15 3.15t"
+VERSIONS_MODERN="3.12 3.13 3.14 3.14t 3.15 3.15t 3.16 3.16t"
 
 # Test on legacy container
 for ver in $VERSIONS_LEGACY; do
@@ -324,7 +332,7 @@ done
 snakepit/
 |-- snakepit-legacy.def             # Apptainer definition (Python 2.7,3.6,3.7,3.8, PyPy 2.7,3.9)
 |-- snakepit-manylinux2014.def      # Apptainer definition (Python 3.9-3.11 tested, CentOS 7)
-|-- snakepit-modern.def             # Apptainer definition (Python 3.9-3.15, 3.14t, 3.15t)
+|-- snakepit-modern.def             # Apptainer definition (Python 3.9-3.16, 3.14t, 3.15t, 3.16t)
 |-- snakepit-legacy.sif             # Built container (generated)
 |-- snakepit-manylinux2014.sif      # Built container (generated)
 |-- snakepit-modern.sif             # Built container (generated)
@@ -340,7 +348,7 @@ snakepit/
     |-- build_extension.sh # Build script (updated for Python 3.14t)
     |-- requirements.txt   # Version-conditional package dependencies
     |-- run_tests.sh       # Unified test runner for all Python versions
-    `-- test_uniform.py    # Uniform test code (works on Python 2.7-3.15)
+    `-- test_uniform.py    # Uniform test code (works on Python 2.7-3.16)
 ```
 
 ## Compatibility Notes
@@ -365,10 +373,19 @@ snakepit/
 - Enables true parallelism for CPU-bound Python threads
 
 ### Python 3.15
-- Pre-release (beta/RC) tracked via deadsnakes PPA - automatically updates as new betas/RCs/final release
+- Stable release (3.15.2) tracked via deadsnakes PPA
 - Installed from `ppa:deadsnakes/ppa` (noble builds) on Ubuntu 24.04 (`snakepit-modern.sif`)
-- Feature freeze already in effect; expected stable: 2026-10-01
-- Free-threading version (`python3.15t`) installed via uv if available in python-build-standalone
+- Free-threading version (`python3.15t`) installed via uv
+- h5py for 3.15/3.15t comes from the scientific-python nightly wheel index
+  (`3.17.0.dev0`) until h5py 3.17.0 ships cp315 wheels (h5py issue #2993)
+- numba has no cp315t wheel, so only numpy+h5py are tested on 3.15t
+
+### Python 3.16
+- Alpha (3.16.0a1 on deadsnakes noble); beta 1 expected May 2027
+- Installed from deadsnakes PPA (optional, so a PPA gap doesn't fail the build);
+  3.16t installed via uv
+- No numpy/h5py/numba cp316 wheels yet (even as nightlies for numpy), so
+  3.16 and 3.16t are tested as bare interpreters (venv + stdlib only)
 
 ### PyPy 2.7
 - Portable tarball from pypy.org (v7.3.17, final PyPy2.7 release, no further updates)
@@ -388,15 +405,16 @@ snakepit/
 - All Pythons are pre-installed in `/opt/python/` from the pypa/manylinux Docker image
 - GCC 10 toolchain via devtoolset-10 (no newer devtoolset was ever published
   for CentOS 7's SCL repo) with gfortran for f2py
-- h5py may not be available for some Python versions due to CentOS 7's old HDF5 (1.8.12)
-- **Only 3.9, 3.10, 3.11, and PyPy 3.11 are in the test matrix.** The image
-  also ships 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t interpreters, but numpy no
-  longer publishes manylinux2014-tagged wheels for cp312+ (its own wheel
-  baseline moved to manylinux_2_28), and building numpy from source fails
-  here because numpy's meson build requires GCC >= 10.3 while this image is
-  fixed at GCC 10.2.1. Real testing for those versions happens in
-  `snakepit-modern.sif` instead, which has a modern enough glibc/GCC for numpy's
-  current wheels to install directly.
+- **Only 3.9, 3.10, and 3.11 are in the test matrix.** The image also ships
+  3.12 and 3.13 interpreters, which do have numpy (2.2.6 still has
+  manylinux2014-tagged wheels for cp312/cp313) and h5py 3.14.0 -- but those
+  two are not in the test matrix. 3.14 and 3.14t/3.15/3.15t have no
+  manylinux2014 wheels at all. Everything is installed wheels-only (see the
+  "never build from source" rule in AGENTS.md). Real testing for 3.12+ happens
+  in `snakepit-modern.sif` instead, which has a modern enough glibc for
+  numpy's current wheels to install directly.
+- PyPy 3.11 (from the base image) has no numpy wheel here and is tested in
+  `snakepit-modern.sif` instead (numpy's pp311 wheels need glibc >= 2.28).
 
 ## Future Enhancements
 

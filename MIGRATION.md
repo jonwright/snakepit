@@ -38,11 +38,11 @@ consolidation.
 | 3.15t | `ubuntu26.04.sif` | `snakepit-modern.sif` |
 | PyPy 2.7 | `ubuntu24.04_pypy.sif` | `snakepit-legacy.sif` |
 | PyPy 3.9 | `ubuntu24.04_pypy.sif` | `snakepit-legacy.sif` |
-| PyPy 3.11 | `ubuntu24.04_pypy.sif` | `snakepit-manylinux2014.sif` |
+| PyPy 3.11 | `ubuntu24.04_pypy.sif` | `snakepit-modern.sif` |
 
-\* The old `manylinux2014.sif` listed 3.12-3.14 as covered, but numpy has
-since stopped publishing wheels for that old glibc/GCC baseline above cp311
-(see `specification.md` under "manylinux2014") -- those specific
+\* The old `manylinux2014.sif` listed 3.12-3.14 as covered, but numpy's
+wheels for that old glibc/GCC baseline thin out above cp311 (numpy 2.2.6
+still covers cp312/cp313; cp314+ has none) -- those specific
 (version, old-glibc) checks were already silently broken before this
 consolidation, independent of it. `snakepit-modern.sif` is where 3.12-3.14
 get real testing now; the old-glibc leg for them is gone because it no
@@ -86,7 +86,7 @@ file, swap in the new container from the version map above, e.g.:
 # New
 ./test_in_container.sh python2.7 snakepit-legacy.sif
 ./test_in_container.sh python3.6 snakepit-legacy.sif
-./test_in_container.sh pypy3.11 snakepit-manylinux2014.sif
+./test_in_container.sh pypy3.11 snakepit-modern.sif
 ```
 
 If you have HPC module files or job scripts that hardcode a path like
@@ -102,8 +102,9 @@ change plus the container reshuffle in the table above.
   different (and simpler) binary source.
 - **3.8** now comes from `uv`/python-build-standalone instead of Ubuntu
   20.04's own apt package, since no distro or PPA ships 3.8 anymore.
-- **PyPy 3.11** now comes pre-installed in the upstream `manylinux2014`
-  image instead of being separately `uv`-installed on Ubuntu 24.04.
+- **PyPy 3.11** now comes `uv`-installed into `snakepit-modern.sif` (pinned
+  to pypy-3.11.15 = PyPy 7.3.23) instead of the upstream `manylinux2014`
+  image, because numpy's pp311 wheels need glibc >= 2.28 (CentOS 7 is 2.17).
 - If you were relying on `ubuntu20.04.sif`/`debian10.sif`'s specific base OS
   (e.g. testing against Ubuntu 20.04's or Debian 10's particular glibc/libc
   versions for reasons unrelated to Python version), note the replacement

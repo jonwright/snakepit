@@ -104,15 +104,20 @@ Test a Python version:
 ### Supported Python Versions
 - **snakepit-legacy.sif** (Ubuntu 18.04): Python 2.7, 3.6, 3.7 (native apt), 3.8 (uv prebuilt),
   PyPy 2.7 (pypy.org tarball), PyPy 3.9 (uv prebuilt)
-- **snakepit-manylinux2014.sif** (CentOS 7, glibc 2.17): Python 3.9, 3.10, 3.11, PyPy 3.11
-  -- **tested versions only**. The image also ships 3.12-3.15/3.14t/3.15t
-  interpreters, but numpy has no manylinux2014 wheels for cp312+ and this
-  image's GCC 10.2 can't build numpy from source (needs >= 10.3), so those
-  are NOT in the test matrix. Use `snakepit-modern.sif` for those.
-- **snakepit-modern.sif** (Ubuntu 24.04): Python 3.9, 3.10, 3.11 (deadsnakes PPA),
-  3.12 (native default), 3.13, 3.14, 3.15 (deadsnakes PPA), 3.14t, 3.15t
-  (uv prebuilt free-threading). 3.9/3.10/3.11 are tested here *and* in
-  `snakepit-manylinux2014.sif` on purpose -- the original six-container
+- **snakepit-manylinux2014.sif** (CentOS 7, glibc 2.17): Python 3.9, 3.10, 3.11
+  -- **tested versions only**. The image also ships 3.12 and 3.13 interpreters
+  (pre-built in the upstream pypa image) that do have numpy (2.2.6 still has
+  manylinux2014 wheels for cp312/cp313) and h5py 3.14.0, but those two are
+  NOT in the test matrix; 3.14 and 3.14t/3.15/3.15t have no manylinux2014
+  wheels at all. The base image's PyPy 3.11 is still present but has no
+  numpy here (numpy's pp311 wheels need glibc >= 2.28); PyPy 3.11 is
+  tested in `snakepit-modern.sif`. Use `snakepit-modern.sif` for
+  the pre-release/free-threading versions.
+- **snakepit-modern.sif** (Ubuntu 24.04): Python 3.9, 3.10, 3.11, 3.13, 3.14, 3.15
+  (deadsnakes PPA), 3.12 (native default), 3.16 (deadsnakes PPA, alpha),
+  3.14t, 3.15t, 3.16t (uv prebuilt free-threading), PyPy 3.11 (uv prebuilt,
+  pinned to pypy-3.11.15 = PyPy 7.3.23). 3.9/3.10/3.11 are tested here *and*
+  in `snakepit-manylinux2014.sif` on purpose -- the original six-container
   design tested those three versions against both a modern and an old glibc
   baseline, and this preserves that.
 - **ubuntu20.04_ppc64le.sif**: Python 3.11 (Power9 / ppc64le, QEMU build)
@@ -148,8 +153,9 @@ with the same flag), or uses a plain venv to ignore them. Apptainer mounts
 $HOME, so: set `PYTHONNOUSERSITE=1` (else ~/.local/lib/pythonX.Y packages
 shadow the image's) and give `uv venv --python` an absolute interpreter path
 (else uv may pick a Python from the host's ~/.local/share/uv). `run_tests.sh`
-does both. PyPy 2.7 and PyPy 3.11 (manylinux2014) have no numpy wheels and
-currently fail the matrix.
+does both. PyPy 2.7 and 3.16/3.16t have no numpy wheels and are tested as bare
+interpreters (see `BARE_VERSIONS` in `test_images.py`); PyPy 3.11 in
+`snakepit-modern.sif` does have numpy 2.4.6 and passes the matrix.
 
 ### Key Files
 - `snakepit-legacy.def` / `snakepit-manylinux2014.def` / `snakepit-modern.def`: Apptainer container definitions
@@ -161,7 +167,7 @@ currently fail the matrix.
 
 ### Architecture
 - Apptainer definitions use fakeroot for non-root container building
-- Tests are Python 2.7-3.15 compatible (no f-strings, `from __future__ import`)
+- Tests are Python 2.7-3.16 compatible (no f-strings, `from __future__ import`)
 - Single `requirements.txt` with Python version markers handles all package versions
 
 ## Contributing Guidelines
@@ -185,7 +191,7 @@ This builds all containers and tests all Python versions. Results are logged to 
 
 - Prefer conciseness in comments; avoid redundant documentation
 - Keep functions focused and minimal
-- Test code should work identically across Python 2.7-3.15
+- Test code should work identically across Python 2.7-3.16
 - Use `from __future__ import print_function` for Python 2.7 compatibility
 - No f-strings in any Python code that must support Python 2.7
 - PyPy uses `virtualenv` (not `venv`); `ensurepip` bootstraps pip on PyPy

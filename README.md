@@ -1,24 +1,25 @@
 # Snakepit
 
-Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.15, including free-threading (3.14t, 3.15t) and PyPy (2.7, 3.9, 3.11).
+Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.16, including free-threading (3.14t, 3.15t, 3.16t) and PyPy (2.7, 3.9, 3.11).
 
 Three containers, each sourcing every interpreter as a binary from a package
 manager (apt, deadsnakes PPA, uv/python-build-standalone, or pypy.org) --
 never compiled from source by this repo:
 
 - **`snakepit-legacy.sif`** (Ubuntu 18.04): 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9
-- **`snakepit-manylinux2014.sif`** (CentOS 7, glibc 2.17): 3.9, 3.10, 3.11, PyPy 3.11
-- **`snakepit-modern.sif`** (Ubuntu 24.04): 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t
+- **`snakepit-manylinux2014.sif`** (CentOS 7, glibc 2.17): 3.9, 3.10, 3.11
+- **`snakepit-modern.sif`** (Ubuntu 24.04): 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, 3.16 (alpha), 3.16t, PyPy 3.11
 
 3.9/3.10/3.11 are deliberately tested in **both** `snakepit-manylinux2014.sif`
 (old glibc 2.17) and `snakepit-modern.sif` (modern glibc) -- preserving the
 original six-container design's dual-glibc coverage for those three
-versions. `snakepit-manylinux2014.sif` also ships interpreters for 3.12+
-(they come pre-built in the upstream pypa image), but those aren't included
-in the test matrix: numpy no longer publishes wheels for that old glibc/GCC
-baseline above cp311, and the image's GCC 10.2 can't build numpy from source
-either. `snakepit-modern.sif`'s newer glibc/GCC is what actually gets those
-versions real package-based testing -- see `specification.md` for details.
+versions. `snakepit-manylinux2014.sif` also ships interpreters for 3.12 and
+3.13 (pre-built in the upstream pypa image; numpy 2.2.6 still has
+manylinux2014 wheels for cp312/cp313, so numpy and h5py 3.14.0 are present
+there), but those two are not in the test matrix. 3.14 and 3.14t/3.15/3.15t
+have no manylinux2014 wheels at all. `snakepit-modern.sif`'s newer glibc/GCC
+is what actually gets those versions real package-based testing -- see
+`specification.md` for details.
 
 ## Quick Start
 
@@ -31,6 +32,14 @@ apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
 
 No `sudo` required - uses Apptainer's fakeroot capability.
+
+**Build host note**: the images were built with `apptainer build --fakeroot` on an
+Ubuntu 20.04 host (glibc 2.31) with no `/etc/subuid` entry. On an Ubuntu 24.04
+host lacking a subuid entry, the manylinux2014 build fails: Apptainer injects
+the host's `faked` (which needs GLIBC_2.33/2.34) into the CentOS 7 (glibc
+2.17) image. Fix: add subuid/subgid entries for the user, or build on an older
+host. Point `APPTAINER_TMPDIR`/`APPTAINER_CACHEDIR` at local disk for large
+builds.
 
 ### Test a Python Version
 
@@ -46,20 +55,39 @@ No `sudo` required - uses Apptainer's fakeroot capability.
 # Interactive shell for Python 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 (Ubuntu 18.04)
 apptainer exec --bind $(pwd):/workspace snakepit-legacy.sif bash
 
-# Interactive shell for Python 3.9, 3.10, 3.11, PyPy 3.11 (manylinux2014, CentOS 7, old glibc)
+# Interactive shell for Python 3.9, 3.10, 3.11 (manylinux2014, CentOS 7, old glibc)
 apptainer exec --bind $(pwd):/workspace snakepit-manylinux2014.sif bash
 
-# Interactive shell for Python 3.9-3.15, 3.14t, 3.15t (Ubuntu 24.04, modern glibc)
+# Interactive shell for Python 3.9-3.16, 3.14t, 3.15t, 3.16t, PyPy 3.11 (Ubuntu 24.04, modern glibc)
 apptainer exec --bind $(pwd):/workspace snakepit-modern.sif bash
 ```
+
+### Use Preinstalled Scientific Packages
+
+Every image preinstalls numpy/numba/h5py wheels into each interpreter's
+system site-packages at build time (see `/opt/snakepit/packages.txt` in the
+image, and the three manifest tables in `SUMMARY.md`). To use them, make your
+venv with `--system-site-packages`; a plain venv ignores them. Because
+Apptainer mounts `$HOME`, also set `PYTHONNOUSERSITE=1` (so `~/.local` does
+not shadow the image's packages) and pass an absolute interpreter path to
+`uv venv --python` (so uv does not pick a Python from the host's
+`~/.local/share/uv`):
+
+```bash
+apptainer exec snakepit-modern.sif bash -c \
+  'python3.12 -m venv --system-site-packages v && PYTHONNOUSERSITE=1 v/bin/python -c "import numpy"'
+```
+
+`test_images.py` defaults to testing the preinstalled packages
+(`SNAKEPIT_TEST_MODE=fresh` instead pip-installs wheels into an empty venv).
 
 ## Supported Python Versions
 
 | Container | Python Versions | Base |
 |-----------|----------------|------|
 | `snakepit-legacy.sif` | 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 | Ubuntu 18.04 |
-| `snakepit-manylinux2014.sif` | 3.9, 3.10, 3.11, PyPy 3.11 | CentOS 7 (glibc 2.17) |
-| `snakepit-modern.sif` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | Ubuntu 24.04 |
+| `snakepit-manylinux2014.sif` | 3.9, 3.10, 3.11 | CentOS 7 (glibc 2.17) |
+| `snakepit-modern.sif` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, 3.16 (alpha), 3.16t, PyPy 3.11 | Ubuntu 24.04 |
 
 3.9/3.10/3.11 appear in both `snakepit-manylinux2014.sif` and
 `snakepit-modern.sif` on purpose (old-glibc leg + modern-glibc leg).
@@ -127,7 +155,7 @@ All tests validate NumPy, h5py, numba, and C extension compilation/execution.
 
 ## Cross-Testing *All* Python Versions
 
-To run every supported Python version (2.7 through 3.15, free-threading
+To run every supported Python version (2.7 through 3.16, free-threading
 builds, and PyPy) across all three containers in one shot:
 
 ```bash
@@ -150,8 +178,8 @@ apptainer shell -e -B $(pwd)/test_workspace:/workspace snakepit-<container>.sif
 | Python version(s) | Container |
 |---|---|
 | 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9 | `snakepit-legacy.sif` |
-| 3.9, 3.10, 3.11, PyPy 3.11 (old glibc) | `snakepit-manylinux2014.sif` |
-| 3.9, 3.10, 3.11 (modern glibc), 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t | `snakepit-modern.sif` |
+| 3.9, 3.10, 3.11 (old glibc) | `snakepit-manylinux2014.sif` |
+| 3.9, 3.10, 3.11 (modern glibc), 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, 3.16, 3.16t, PyPy 3.11 | `snakepit-modern.sif` |
 
 To test one version by hand instead of the whole matrix, use
 `test_in_container.sh <python_cmd> <container>.sif` as shown above, or run
