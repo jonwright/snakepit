@@ -1,0 +1,48 @@
+Bootstrap: docker
+From: quay.io/pypa/manylinux_2_28_x86_64:latest
+
+%help
+    manylinux_2_28 container for testing Python C extension builds
+    Based on AlmaLinux 8 (glibc 2.28) with the pypa image's CPython 3.9-3.15,
+    3.14t, 3.15t and PyPy 3.11.
+
+    glibc 2.28 is the current wheel floor of the scientific stack: numpy >= 2.3
+    and h5py >= 3.15 publish manylinux_2_28 wheels only, and cibuildwheel >= 3
+    builds in this image by default. snakepit-manylinux2014.sif (glibc 2.17)
+    stays for wheels that still claim manylinux2014.
+
+%labels
+    Author Snakepit
+    Version 1.0
+    BaseOS AlmaLinux 8 (manylinux_2_28)
+
+%files
+    install_sci_packages.sh /opt/snakepit/install_sci_packages.sh
+
+%post
+    # gfortran for f2py users (the test extension itself only needs gcc)
+    dnf install -y gcc-gfortran
+    dnf clean all
+
+    # numpy/numba/h5py into each interpreter's system site-packages (wheels only)
+    bash /opt/snakepit/install_sci_packages.sh \
+        python3.9 python3.10 python3.11 python3.12 python3.13 python3.14 \
+        python3.14t python3.15 python3.15t python3.16 python3.16t pypy3.11
+
+    # Verify all Pythons are accessible
+    for pyversion in python3.9 python3.10 python3.11 python3.12 python3.13 \
+                     python3.14 python3.14t python3.15 python3.15t \
+                     python3.16 python3.16t pypy3.11; do
+        if command -v $pyversion >/dev/null 2>&1; then
+            echo "$($pyversion --version) - [OK]"
+        else
+            echo "$pyversion - not found"
+        fi
+    done
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+
+%runscript
+    exec /bin/bash "$@"

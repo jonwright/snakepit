@@ -20,14 +20,16 @@ LOG_FILE = SCRIPT_DIR / "test_results.log"
 # Python versions to test
 # Format: (version, sif_file)
 #
-# Three-container layout (consolidated from six -- see AGENTS.md/MIGRATION.md):
+# Four x86_64 containers (see AGENTS.md/MIGRATION.md):
 #   snakepit-legacy.sif       Ubuntu 18.04: 2.7, 3.6, 3.7 (native apt) + 3.8 (uv prebuilt)
 #                    + PyPy 2.7 (pypy.org tarball), PyPy 3.9 (uv prebuilt)
 #   snakepit-manylinux2014.sif  CentOS 7 (glibc 2.17), pypa-maintained: 3.9-3.11 tested
-#                    here (old-glibc leg). 3.12+/3.14t/3.15/3.15t interpreters exist but
-#                    numpy has no manylinux2014 wheels for them and the image's GCC 10.2
-#                    can't build numpy from source, so those are NOT in this test matrix.
-#   snakepit-modern.sif       Ubuntu 24.04 (apt + deadsnakes + uv): 3.9-3.15, 3.14t/3.15t --
+#                    here (oldest-glibc leg, for wheels still tagged manylinux2014).
+#                    3.12/3.13 have wheels but are untested; 3.14+ have none.
+#   snakepit-manylinux_2_28.sif  AlmaLinux 8 (glibc 2.28), pypa-maintained: 3.9-3.15,
+#                    3.14t/3.15t, PyPy 3.11 -- the current manylinux wheel floor.
+#   snakepit-modern.sif       Ubuntu 24.04 (apt + deadsnakes + uv): 3.9-3.16, 3.14t-3.16t,
+#                    PyPy 3.11 --
 #                    modern glibc means real numpy/h5py/numba wheels install cleanly.
 #                    3.9/3.10/3.11 are deliberately tested here *and* in
 #                    manylinux2014.sif (modern-glibc leg + old-glibc leg), matching the
@@ -40,6 +42,17 @@ PYTHON_VERSIONS = [
     ("3.9", "snakepit-manylinux2014.sif"),
     ("3.10", "snakepit-manylinux2014.sif"),
     ("3.11", "snakepit-manylinux2014.sif"),
+    # glibc 2.28: the current wheel floor (numpy >= 2.3, h5py >= 3.15 and
+    # cibuildwheel >= 3 all target manylinux_2_28)
+    ("3.9", "snakepit-manylinux_2_28.sif"),
+    ("3.10", "snakepit-manylinux_2_28.sif"),
+    ("3.11", "snakepit-manylinux_2_28.sif"),
+    ("3.12", "snakepit-manylinux_2_28.sif"),
+    ("3.13", "snakepit-manylinux_2_28.sif"),
+    ("3.14", "snakepit-manylinux_2_28.sif"),
+    ("3.14t", "snakepit-manylinux_2_28.sif"),
+    ("3.15", "snakepit-manylinux_2_28.sif"),
+    ("3.15t", "snakepit-manylinux_2_28.sif"),
     ("3.9", "snakepit-modern.sif"),
     ("3.10", "snakepit-modern.sif"),
     ("3.11", "snakepit-modern.sif"),
@@ -59,6 +72,7 @@ PYTHON_VERSIONS = [
     # PyPy containers (cpython-compatible cpyext ABI testing)
     ("pypy2.7", "snakepit-legacy.sif"),
     ("pypy3.9", "snakepit-legacy.sif"),
+    ("pypy3.11", "snakepit-manylinux_2_28.sif"),
     ("pypy3.11", "snakepit-modern.sif"),
 ]
 
