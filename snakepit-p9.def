@@ -1,0 +1,64 @@
+Bootstrap: docker
+From: mirror.gcr.io/library/ubuntu:24.04
+
+%help
+    POWER9 (ppc64le) container: one conda-forge environment per Python,
+    each with prebuilt numpy/h5py/numba, exposed as /usr/local/bin/python3.X.
+    Build natively on a POWER9 node (see build_p9.sh), not under QEMU.
+
+      python3.8    numpy 1.24, oldest
+      python3.11   numpy 1.24.4 / h5py 3.10.0 / numba 0.57.1 on Python 3.11.6:
+                   the ESRF `module load jupyter-slurm` stack (2023.10.2-.11)
+      python3.12, python3.13, python3.14, python3.15   numpy 2
+      python3.14t  free-threading, numpy 2
+
+    PyPI has no ppc64le numpy/h5py/numba wheels; conda-forge is the binary
+    source here. Nothing is compiled from source. /opt/snakepit/packages.txt
+    lists what each interpreter has.
+
+%labels
+    Author Snakepit
+    Version 1.0
+    BaseOS Ubuntu 24.04
+    Architecture ppc64le
+
+%files
+    install_sci_packages.sh /opt/snakepit/install_sci_packages.sh
+
+%post
+    set -eu
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update && apt-get install -y --no-install-recommends \
+        build-essential gfortran git curl ca-certificates bzip2 \
+        && rm -rf /var/lib/apt/lists/*
+
+    export MAMBA_ROOT_PREFIX=/opt/mamba
+    mkdir -p $MAMBA_ROOT_PREFIX && cd $MAMBA_ROOT_PREFIX
+    curl -Ls https://micro.mamba.pm/api/micromamba/linux-ppc64le/latest | tar -xj bin/micromamba
+    MM="$MAMBA_ROOT_PREFIX/bin/micromamba"
+
+    # name | python binary | conda specs
+    while IFS='|' read -r env exe specs; do
+        [ -n "$env" ] || continue
+        $MM create -y -q -n $env -c conda-forge --override-channels $specs
+        ln -sf $MAMBA_ROOT_PREFIX/envs/$env/bin/$exe /usr/local/bin/$exe
+    done <<'EOF'
+py38|python3.8|python=3.8 numpy=1.24 h5py numba
+py311|python3.11|python=3.11.6 numpy=1.24.4 h5py=3.10.0 numba=0.57.1
+py312|python3.12|python=3.12 numpy>=2 h5py numba
+py313|python3.13|python=3.13 numpy>=2 h5py numba
+py314|python3.14|python=3.14 numpy>=2 h5py numba
+py315|python3.15|python=3.15 numpy>=2 h5py numba
+py314t|python3.14t|python-freethreading=3.14 numpy>=2 h5py numba
+EOF
+    $MM clean -a -y -q
+
+    bash /opt/snakepit/install_sci_packages.sh --manifest-only \
+        python3.8 python3.11 python3.12 python3.13 python3.14 python3.15 python3.14t
+
+%environment
+    export LC_ALL=C.UTF-8
+    export MAMBA_ROOT_PREFIX=/opt/mamba
+
+%runscript
+    exec /bin/bash "$@"

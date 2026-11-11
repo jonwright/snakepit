@@ -14,6 +14,9 @@ From: ubuntu:18.04
     Version 1.0
     BaseOS Ubuntu 18.04
 
+%files
+    install_sci_packages.sh /opt/snakepit/install_sci_packages.sh
+
 %post
     export DEBIAN_FRONTEND=noninteractive
 
@@ -98,6 +101,17 @@ From: ubuntu:18.04
     pypy -m ensurepip || true
     pypy -m pip install --upgrade pip --quiet || true
     pypy -m pip install virtualenv --quiet || true
+
+    # bionic's python3-pip is pip 9 (too old for manylinux2010+ wheels);
+    # give 3.6 and 3.7 their own current pip
+    for v in 3.6 3.7; do
+        curl -fsSL https://bootstrap.pypa.io/pip/$v/get-pip.py -o get-pip.py && \
+            python$v get-pip.py && rm -f get-pip.py
+    done
+
+    # numpy/numba/h5py into each interpreter's system site-packages (wheels only)
+    bash /opt/snakepit/install_sci_packages.sh \
+        python2.7 python3.6 python3.7 python3.8 pypy2.7 pypy3.9
 
     # Verify installations
     echo "---"

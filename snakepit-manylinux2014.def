@@ -10,14 +10,24 @@ From: quay.io/pypa/manylinux2014_x86_64:latest
     Version 1.0
     BaseOS CentOS 7 (manylinux2014)
 
+%files
+    install_sci_packages.sh /opt/snakepit/install_sci_packages.sh
+
 %post
     # Install gcc-gfortran for f2py support and hdf5-devel for h5py
     yum install -y gcc-gfortran hdf5-devel
     yum clean all
 
+    # numpy/numba/h5py into each interpreter's system site-packages (wheels
+    # only; cp312+ mostly have no manylinux2014 wheels and stay empty)
+    bash /opt/snakepit/install_sci_packages.sh \
+        python3.9 python3.10 python3.11 python3.12 python3.13 python3.14 \
+        python3.14t python3.15 python3.15t python3.16 python3.16t pypy3.11
+
     # Verify all Pythons are accessible
     for pyversion in python3.9 python3.10 python3.11 python3.12 python3.13 \
-                     python3.14 python3.14t python3.15 python3.15t; do
+                     python3.14 python3.14t python3.15 python3.15t \
+                     python3.16 python3.16t; do
         if command -v $pyversion >/dev/null 2>&1; then
             echo "$($pyversion --version) - [OK]"
         else
