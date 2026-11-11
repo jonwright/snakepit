@@ -20,6 +20,7 @@ This guide teaches you (an LLM/AI agent) how to use these containers effectively
 | `snakepit-manylinux2014.sif` | CentOS 7 (glibc 2.17) | 3.9, 3.10, 3.11 (tested) | manylinux2014 image (GCC 10). Also ships 3.12/3.13 (which have numpy/h5py wheels) but those aren't tested, and 3.14+/3.14t/3.15/3.15t with no wheels -- see note below |
 | `snakepit-manylinux_2_28.sif` | AlmaLinux 8 (glibc 2.28) | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, PyPy 3.11 (tested) | pypa manylinux_2_28 image (quay.io/pypa/manylinux_2_28_x86_64). No 3.16/3.16t yet |
 | `snakepit-modern.sif` | Ubuntu 24.04 | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, 3.16 (alpha), 3.16t, PyPy 3.11 | deadsnakes PPA (3.9-3.11, 3.13-3.16) + native apt (3.12) + uv (3.14t, 3.15t, 3.16t, PyPy 3.11) |
+| `snakepit-p9.sif` | Ubuntu 24.04 + conda-forge (micromamba) | 3.8, 3.11 (numpy 1), 3.12, 3.13, 3.14, 3.15 (numpy 2), 3.14t (free-threading) | one conda-forge env per Python, exposed as `python3.X`. Built and tested natively on POWER9 (ppc64le) -- see `build_p9.sh`, not QEMU |
 
 **Why manylinux2014 stops at 3.11 for real testing**: numpy no longer
 publishes `manylinux2014`-tagged wheels for cp314+ (its own wheel baseline
@@ -49,6 +50,10 @@ apptainer build --fakeroot snakepit-modern.sif snakepit-modern.def
 ```
 
 **Note**: First build downloads the base Docker image (1-2 GB). Subsequent builds are fast.
+
+**POWER9 image**: `snakepit-p9.sif` is not built with `apptainer build` here.
+Build and test it natively on a POWER9 node with one command from the
+checkout: `sbatch build_p9.sh` (see AGENTS.md "Cross-Architecture Containers").
 
 ## Core Operations
 
@@ -148,7 +153,31 @@ The `test_in_container.sh` script automates the full test cycle (venv -> pip ins
 python3 test_images.py
 ```
 
-This iterates through all Python versions across all containers.
+This iterates through all Python versions across all containers. Entries whose
+image is a different architecture than the current host, or whose `.sif` is
+not built, are skipped (not failed).
+
+### Testing against numpy 1 (ESRF)
+
+The ESRF `module load jupyter-slurm` environment is numpy 1 even in its newest
+release, so it is the recommended numpy 1 test. From the snakepit checkout, on
+any host with Slurm access (no `module load` needed; the script uses the
+environment's path directly):
+
+```bash
+sbatch test_numpy_abi.sh            # default numpy 1 = jupyter-slurm latest
+srun -p nice bash test_numpy_abi.sh
+# optional first arg: a different numpy 1 Python
+```
+
+`test_numpy_abi.sh` runs from the snakepit checkout and needs
+`snakepit-modern.sif`. It uses the jupyter-slurm Python as the numpy 1 side
+and `snakepit-modern.sif` python3.12 (numpy 2.5.4) as the numpy 2 side:
+- A: `test_extension/run_tests.sh` against the numpy 1 env's own packages -> OK
+- B: build with numpy 2, import under numpy 1 -> OK
+- C: build with numpy 1, import under numpy 2 -> ImportError (one-way ABI)
+
+It exits 1 on any other outcome. See the README "numpy 1 vs numpy 2" section.
 
 ## Adding a New Python Version
 

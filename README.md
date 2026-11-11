@@ -2,14 +2,16 @@
 
 Multi-Python Apptainer containers for testing scientific Python C extensions across Python 2.7 through 3.16, including free-threading (3.14t, 3.15t, 3.16t) and PyPy (2.7, 3.9, 3.11).
 
-Four containers, each sourcing every interpreter as a binary from a package
-manager (apt, deadsnakes PPA, uv/python-build-standalone, or pypy.org) --
-never compiled from source by this repo:
+Four x86_64 containers plus a native POWER9 container, each sourcing every
+interpreter as a binary from a package manager (apt, deadsnakes PPA,
+uv/python-build-standalone, pypy.org, or conda-forge via micromamba) -- never
+compiled from source by this repo:
 
 - **`snakepit-legacy.sif`** (Ubuntu 18.04): 2.7, 3.6, 3.7, 3.8, PyPy 2.7, PyPy 3.9
 - **`snakepit-manylinux2014.sif`** (CentOS 7, glibc 2.17): 3.9, 3.10, 3.11
 - **`snakepit-manylinux_2_28.sif`** (AlmaLinux 8, glibc 2.28): 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, PyPy 3.11
 - **`snakepit-modern.sif`** (Ubuntu 24.04): 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, 3.16 (alpha), 3.16t, PyPy 3.11
+- **`snakepit-p9.sif`** (Ubuntu 24.04 + conda-forge): 3.8, 3.11, 3.12, 3.13, 3.14, 3.15, 3.14t -- one conda-forge environment per Python, exposed as `python3.X`; built and tested natively on POWER9 (ppc64le), not under QEMU
 
 Each container targets a different glibc baseline. `snakepit-manylinux2014.sif`
 (glibc 2.17) is the oldest baseline -- for wheels still tagged manylinux2014
@@ -21,6 +23,14 @@ by default) and is the right place to test downstream wheels that are no
 longer manylinux2014-only. `snakepit-modern.sif` (Ubuntu 24.04) is the newest
 glibc plus the pre-release interpreters (3.16, free-threading 3.16t) and
 PyPy 3.11.
+
+`snakepit-p9.sif` is not a glibc baseline but a different architecture
+(ppc64le). **Why ppc64le uses conda-forge**: PyPI publishes no ppc64le wheels
+for numpy, h5py or numba. The silx wheelhouse
+(https://www.silx.org/pub/wheelhouse/) has ppc64le numpy and h5py but no
+numba; conda-forge carries all three for Python 3.8-3.15 and free-threading,
+so `snakepit-p9.sif` installs one conda-forge environment per Python
+(micromamba) and exposes each as `python3.X`. Nothing is compiled from source.
 
 3.9/3.10/3.11 are deliberately tested in **both** `snakepit-manylinux2014.sif`
 (old glibc 2.17) and `snakepit-modern.sif` (modern glibc) -- preserving the
@@ -112,6 +122,7 @@ apptainer exec snakepit-modern.sif bash -c \
 | `snakepit-manylinux2014.sif` | 3.9, 3.10, 3.11 | CentOS 7 (glibc 2.17) |
 | `snakepit-manylinux_2_28.sif` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, PyPy 3.11 | AlmaLinux 8 (glibc 2.28) |
 | `snakepit-modern.sif` | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, 3.16 (alpha), 3.16t, PyPy 3.11 | Ubuntu 24.04 |
+| `snakepit-p9.sif` | 3.8, 3.11 (numpy 1), 3.12, 3.13, 3.14, 3.15 (numpy 2), 3.14t (free-threading) | Ubuntu 24.04 + conda-forge |
 
 3.9/3.10/3.11 appear in both `snakepit-manylinux2014.sif` and
 `snakepit-modern.sif` on purpose (old-glibc leg + modern-glibc leg).
@@ -180,7 +191,7 @@ All tests validate NumPy, h5py, numba, and C extension compilation/execution.
 ## Cross-Testing *All* Python Versions
 
 To run every supported Python version (2.7 through 3.16, free-threading
-builds, and PyPy) across all four containers in one shot:
+builds, and PyPy) across the containers in one shot:
 
 ```bash
 python3 test_images.py
@@ -188,7 +199,7 @@ python3 test_images.py
 
 This reads the `PYTHON_VERSIONS` list in `test_images.py` -- the single
 source of truth for which (version, container) pairs are tested -- builds
-nothing itself (build the four `.sif` files first, see Quick Start above),
+nothing itself (build the `.sif` files first, see Quick Start above),
 runs each version's full venv -> pip install -> f2py build -> execute cycle,
 and writes a pass/fail summary plus full logs to `test_results.log`. It stops
 at the first failure by default so you can debug interactively:
@@ -196,6 +207,11 @@ at the first failure by default so you can debug interactively:
 ```bash
 apptainer shell -e -B $(pwd)/test_workspace:/workspace snakepit-<container>.sif
 ```
+
+Entries whose image is a different architecture than the current host, or
+whose `.sif` is not built, are **skipped** (not failed): run on x86 for the
+x86 entries, on POWER9 for the p9 entries. The p9 and aarch64 entries
+are skipped on an x86 host.
 
 **Version-to-container map** (see `specification.md` for the full rationale):
 
@@ -205,6 +221,7 @@ apptainer shell -e -B $(pwd)/test_workspace:/workspace snakepit-<container>.sif
 | 3.9, 3.10, 3.11 (old glibc) | `snakepit-manylinux2014.sif` |
 | 3.9, 3.10, 3.11, 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, PyPy 3.11 (current wheel floor) | `snakepit-manylinux_2_28.sif` |
 | 3.9, 3.10, 3.11 (modern glibc), 3.12, 3.13, 3.14, 3.14t, 3.15, 3.15t, 3.16, 3.16t, PyPy 3.11 | `snakepit-modern.sif` |
+| 3.8, 3.11 (numpy 1), 3.12, 3.13, 3.14, 3.15, 3.14t (numpy 2) | `snakepit-p9.sif` |
 
 To test one version by hand instead of the whole matrix, use
 `test_in_container.sh <python_cmd> <container>.sif` as shown above, or run
@@ -213,7 +230,7 @@ session (see SKILL.md for the manual step-by-step).
 
 ### Deploying on an HPC system
 
-The four `.sif` files are self-contained and portable -- build them once
+The `.sif` files are self-contained and portable -- build them once
 (anywhere with Apptainer and network access), then copy them to shared
 storage on the cluster and reference them by absolute path from job scripts;
 no network access or root is needed on the compute nodes:
@@ -231,15 +248,57 @@ apptainer exec --bind $PWD:/workspace /apps/snakepit/snakepit-modern.sif \
     bash -c "python3.14 -m venv /workspace/venv && ..."
 ```
 
-**Multi-architecture note**: this repo also has `ubuntu20.04_ppc64le.def` /
-`ubuntu24.04_aarch64.def`, narrow QEMU-emulated smoke-test containers (each
-just Python 3.11) predating the `snakepit-*` four-container layout above.
-Building full `ppc64le`/`aarch64` equivalents of `snakepit-legacy` /
-`snakepit-manylinux2014` / `snakepit-manylinux_2_28` / `snakepit-modern`
-(same version matrix, same naming pattern, e.g.
-`snakepit-modern-aarch64.sif`) is planned but not yet done -- it needs a host
-with `qemu-user-static` and binfmt_misc handlers registered (see AGENTS.md),
-and hasn't been built or tested anywhere yet.
+**Multi-architecture note**: `snakepit-p9.sif` covers POWER9 (ppc64le) by
+building and testing natively on a POWER9 node (see `build_p9.sh`); the Ubuntu
+24.04 + conda-forge image carries 3.8, 3.11-3.15 and 3.14t.
+`ubuntu24.04_aarch64.def` covers ARM64 as a QEMU-emulated smoke test (Python
+3.11 only) until an ARM machine is available. Building full
+`snakepit-legacy` / `snakepit-manylinux2014` / `snakepit-manylinux_2_28` /
+`snakepit-modern` equivalents for aarch64 (same version matrix, same naming
+pattern, e.g. `snakepit-modern-aarch64.sif`) is planned but not yet done -- it
+needs a host with `qemu-user-static` and binfmt_misc handlers registered (see
+AGENTS.md), and hasn't been built or tested anywhere yet.
+
+## numpy 1 vs numpy 2
+
+numpy's C ABI is one-way: extensions built against numpy 2 import on numpy 1.x
+and 2.x, but extensions built against numpy 1 fail to import on numpy 2. So
+build release wheels against numpy 2 (they then work on numpy 1 and 2) and
+spot-check the numpy 1 side.
+
+numpy 1 lives in:
+- `snakepit-legacy.sif` interpreters up to 3.8 (2.7 numpy 1.16.6, 3.6 numpy
+  1.19.5, 3.7 numpy 1.21.6, 3.8 numpy 1.24.4),
+- `snakepit-p9.sif` python3.8 and python3.11 (3.11 reproduces the jupyter-slurm
+  numpy 1 stack exactly),
+- the ESRF `module load jupyter-slurm` environment on x86_64, which is numpy 1
+  even in its newest release:
+
+| jupyter-slurm | Python | numpy | h5py | numba |
+|---|---|---|---|---|
+| 2022.05.1 | 3.9.12 | 1.21.6 | 3.6.0 | 0.55.1 |
+| 2023.10.0 - .11 | 3.11.6 | 1.24.4 | 3.10.0 | 0.57.1 |
+| 2025.04.1 - .6 (latest, the default) | 3.12.9 | 1.26.4 | 3.13.0 | 0.61.0 |
+
+To check the numpy 1 vs 2 ABI with one command:
+
+```bash
+sbatch test_numpy_abi.sh            # default numpy 1 = jupyter-slurm latest
+srun -p nice bash test_numpy_abi.sh # or run it directly on a Slurm node
+# optional first arg: sbatch test_numpy_abi.sh /path/to/a/numpy1/python
+```
+
+The numpy 2 side is `snakepit-modern.sif` python3.12 (numpy 2.5.4). It runs
+three checks from the checkout (needs `snakepit-modern.sif`):
+- A: `test_extension/run_tests.sh` against the numpy 1 environment's own
+  packages -> OK
+- B: build against numpy 2, import under numpy 1 -> OK
+- C: build against numpy 1, import under numpy 2 -> ImportError
+  (`numpy.core.multiarray failed to import`) -- expected, given the one-way ABI.
+
+It exits 1 on any other outcome. Practical rule for downstream: build release
+wheels against numpy 2 (they then work on numpy 1 and 2); test them under
+`jupyter-slurm` for numpy 1.
 
 ## License
 

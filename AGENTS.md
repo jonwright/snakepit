@@ -70,10 +70,32 @@ uv/python-build-standalone, or pypy.org) -- never compiled from source here.
 
 ### Cross-Architecture Containers (ppc64le / aarch64)
 
-Builds foreign-architecture containers using QEMU user-mode emulation.
+ppc64le (POWER9) and aarch64 (ARM64) are handled differently.
+
+**POWER9 (native)**: `snakepit-p9.sif` is built and tested **natively** on a
+POWER9 node -- no QEMU. One command from the snakepit checkout:
+
+```bash
+sbatch build_p9.sh        # from the checkout, on any host with Slurm access
+```
+
+`build_p9.sh` submits to the `low-p9gpu` partition. What the job does:
+- builds `snakepit-p9.sif` in node-local `/tmp` (a `mktemp -d` work dir, with
+  `APPTAINER_TMPDIR`/`APPTAINER_CACHEDIR` under it),
+- runs `test_images.py` there (only the ppc64le entries run; entries for
+  another architecture or an unbuilt image are skipped, not failed),
+- copies `snakepit-p9.sif` and `test_results_p9.log` into the checkout only
+  if every test passes, and **always** removes the `/tmp` work directory.
+
+Because `$HOME` is shared NFS with x86, the job writes results straight back
+into the checkout. This needs a POWER9 (ppc64le) node; no `qemu-user-static`
+or binfmt_misc handlers required.
+
+**aarch64 (QEMU)**: `ubuntu24.04_aarch64.sif` is still a QEMU user-mode
+emulation build (Python 3.11 smoke test) until an ARM machine is available.
 Requires `qemu-user-static` on the build host.
 
-**Sysadmin setup** (one-time):
+**Sysadmin setup** (one-time, QEMU only):
 ```bash
 # Debian/Ubuntu host:
 sudo apt-get install -y qemu-user-static
@@ -83,16 +105,15 @@ sudo dnf install -y qemu-user-static
 
 # Verify binfmt_misc handlers are registered:
 ls /proc/sys/fs/binfmt_misc/ | grep qemu
-# Should show: qemu-aarch64  qemu-ppc64le  (among others)
+# Should show: qemu-aarch64  (among others)
 ```
 
-**Build commands** (the --arch flag tells Apptainer which Docker image variant to pull):
+**Build command (aarch64 only)** (the --arch flag tells Apptainer which Docker image variant to pull):
 ```bash
-apptainer build --fakeroot --arch ppc64le ubuntu20.04_ppc64le.sif ubuntu20.04_ppc64le.def
 apptainer build --fakeroot --arch arm64 ubuntu24.04_aarch64.sif ubuntu24.04_aarch64.def
 ```
 
-**How it works**: QEMU user-mode + kernel binfmt_misc handlers translate foreign
+**How QEMU works**: QEMU user-mode + kernel binfmt_misc handlers translate foreign
 architecture binaries transparently. Apptainer's `--arch` flag selects the matching
 Docker image variant. Both build-time (%post scripts) and runtime (`apptainer exec`)
 are emulated -- no native hardware required.
@@ -130,7 +151,13 @@ Test a Python version:
   in `snakepit-manylinux2014.sif` on purpose -- the original six-container
   design tested those three versions against both a modern and an old glibc
   baseline, and this preserves that.
-- **ubuntu20.04_ppc64le.sif**: Python 3.11 (Power9 / ppc64le, QEMU build)
+- **snakepit-p9.sif** (Ubuntu 24.04 + micromamba, conda-forge): Python 3.8,
+  3.11, 3.12, 3.13, 3.14, 3.15, 3.14t -- one conda-forge environment per
+  Python, exposed as `python3.X`; all have prebuilt numpy/h5py/numba (PyPI has
+  no ppc64le wheels for them, so conda-forge is the binary source). 3.11 is
+  numpy 1 (3.11.6, numpy 1.24.4, h5py 3.10.0, numba 0.57.1 -- the ESRF
+  `module load jupyter-slurm` 2023.10.x stack) and 3.8 is also numpy 1; the
+  rest are numpy 2. Built and tested natively on a POWER9 node (see `build_p9.sh`).
 - **ubuntu24.04_aarch64.sif**: Python 3.11 (ARM64 / aarch64, QEMU build)
 
 **Fixed issue**: putting PyPy 2.7 in the same container as native CPython 2.7
@@ -146,11 +173,12 @@ rpath, unlike CPython). See `specification.md` under "PyPy 2.7".
 May 2027. Until numpy/h5py/numba publish cp316 wheels, 3.16/3.16t are tested as
 bare interpreters (`BARE_VERSIONS` in `test_images.py`: venv + stdlib only).
 
-**Rule: never build upstream packages from source.** `run_tests.sh` installs
-numpy/h5py/numba with `--only-binary :all:`. If a package has no wheel for an
+**Rule: compiling upstream packages is a smell.** `run_tests.sh` installs
+numpy/h5py/numba with `--only-binary :all:`. Prefer existing binaries (PyPI
+wheels, the silx wheelhouse, scientific-python nightlies, conda-forge); compile
+only to test git heads that have no nightly. If a package has no wheel for an
 interpreter, it is skipped (h5py, numba) or that version is tested bare (numpy).
-Only exception: a version that already depended on a source build before this
-rule (record it here if one turns up). Pre-release *wheels* are allowed:
+Pre-release *wheels* are allowed:
 3.15/3.15t take h5py from the scientific-python nightly wheel index until
 h5py 3.17.0 ships cp315 wheels (h5py issue #2993). 3.16t has no h5py wheel at
 all, and numpy has no cp316 wheels even as nightlies, so 3.16/3.16t stay bare.
@@ -168,8 +196,10 @@ interpreters (see `BARE_VERSIONS` in `test_images.py`); PyPy 3.11 in
 `snakepit-modern.sif` does have numpy 2.4.6 and passes the matrix.
 
 ### Key Files
-- `snakepit-legacy.def` / `snakepit-manylinux2014.def` / `snakepit-manylinux_2_28.def` / `snakepit-modern.def`: Apptainer container definitions
-- `ubuntu20.04_ppc64le.def` / `ubuntu24.04_aarch64.def`: Cross-architecture definitions (QEMU)
+- `snakepit-legacy.def` / `snakepit-manylinux2014.def` / `snakepit-manylinux_2_28.def` / `snakepit-modern.def` / `snakepit-p9.def`: Apptainer container definitions
+- `ubuntu24.04_aarch64.def`: Cross-architecture definition (QEMU)
+- `build_p9.sh`: One-command native POWER9 build + test (`sbatch build_p9.sh`)
+- `test_numpy_abi.sh`: numpy 1 vs 2 extension ABI check (x86_64)
 - `test_in_container.sh`: Primary test runner script
 - `test_extension/`: Example C extension with NumPy f2py
 - `test_images.py`: Automated container test suite
@@ -195,7 +225,12 @@ Run all tests:
 python3 test_images.py
 ```
 
-This builds all containers and tests all Python versions. Results are logged to `test_results.log`.
+`test_images.py` runs the (version, container) pairs in `PYTHON_VERSIONS`.
+Entries whose image is a different architecture than the current host, or
+whose `.sif` is not built, are skipped (not failed). Results are logged to
+`test_results.log`. For the numpy 1 vs numpy 2 ABI check:
+`sbatch test_numpy_abi.sh` or `srun -p nice bash test_numpy_abi.sh` (see
+README "numpy 1 vs numpy 2").
 
 ## Notes for LLM/AI Agents
 

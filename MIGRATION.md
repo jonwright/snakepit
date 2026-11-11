@@ -15,9 +15,10 @@ the old names.
 | `ubuntu24.04_pypy.def` | `ubuntu24.04_pypy.sif` | split across `snakepit-legacy.def` and `snakepit-manylinux2014.def` | `snakepit-legacy.sif` / `snakepit-manylinux2014.sif` |
 | `manylinux2014.def` | `manylinux2014.sif` | `snakepit-manylinux2014.def` (renamed only) | `snakepit-manylinux2014.sif` |
 
-`ubuntu20.04_ppc64le.def` / `ubuntu24.04_aarch64.def` are **unchanged** --
-still separate, still just Python 3.11 QEMU smoke tests, not touched by this
-consolidation.
+`ubuntu20.04_ppc64le.def` was removed and replaced by `snakepit-p9.def` +
+`build_p9.sh` (native POWER9 image, `snakepit-p9.sif` -- see README/AGENTS).
+`ubuntu24.04_aarch64.def` is **unchanged** -- still a separate Python 3.11 QEMU
+smoke test, not touched by this consolidation.
 
 ## Python version -> new container map
 
@@ -113,8 +114,12 @@ change plus the container reshuffle in the table above.
 
 ## Not yet migrated
 
-`ppc64le`/`aarch64` cross-architecture builds are unaffected by this
-consolidation and remain narrow single-Python-3.11 QEMU smoke tests under
-their original names. Building full `snakepit-legacy`/`snakepit-manylinux2014`/
-`snakepit-modern` equivalents for those architectures is planned but not
-started -- see the "Multi-architecture note" in `README.md`.
+The cross-architecture images are no longer both narrow QEMU smoke tests:
+`snakepit-p9.sif` now covers ppc64le **natively** (Python 3.8, 3.11-3.15, 3.14t, via
+`snakepit-p9.def` + `build_p9.sh`), replacing the older
+`ubuntu20.04_ppc64le.def` QEMU single-Python-3.11 image. aarch64 remains a
+narrow single-Python-3.11 QEMU smoke test (`ubuntu24.04_aarch64.def`).
+Building full `snakepit-legacy`/`snakepit-manylinux2014`/
+`snakepit-manylinux_2_28`/`snakepit-modern` equivalents for aarch64
+(with the same version matrix) is planned but not started -- see the
+"Multi-architecture note" in `README.md`.

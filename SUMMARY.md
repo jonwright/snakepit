@@ -121,7 +121,25 @@ or uses a plain venv to ignore the image's packages.
 | python3.16t | 3.16.0a1 | - | - | - |
 | pypy3.11 | 3.11.15 | 2.4.6 | - | - |
 
-Only wheels are ever installed -- no upstream package is built from source.
+### `snakepit-p9.sif` (880 MB, 922882048 bytes)
+
+| Interpreter | Python | NumPy | numba | h5py |
+|---|---|---|---|---|
+| python3.8 | 3.8.20 | 1.24.4 | 0.58.1 | 3.11.0 |
+| python3.11 | 3.11.6 | 1.24.4 | 0.57.1 | 3.10.0 |
+| python3.12 | 3.12.16 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.13 | 3.13.18 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.14 | 3.14.10 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.15 | 3.15.2 | 2.5.4 | 0.68.1 | 3.16.0 |
+| python3.14t | 3.14.10 | 2.5.4 | 0.68.1 | 3.16.0 |
+
+snakepit-p9.sif is built and tested natively on POWER9 (conda-forge binaries).
+3.11 is the numpy 1 jupyter-slurm stack (numpy
+1.24.4, h5py 3.10.0, numba 0.57.1), 3.8 is also numpy 1; the rest are numpy 2.
+
+Only prebuilt binaries are installed (PyPI wheels, the silx wheelhouse,
+scientific-python nightlies, conda-forge); compiling upstream packages is a
+smell and is only done to test git heads with no nightly.
 3.15/3.15t h5py (3.17.0.dev0) comes from the scientific-python nightly wheel
 index until h5py 3.17.0 ships cp315 wheels. 3.16/3.16t and pypy2.7 have no
 numpy/numba/h5py wheels and are tested as bare interpreters.
@@ -129,11 +147,12 @@ numpy/numba/h5py wheels and are tested as bare interpreters.
 Test matrix (2026-11-11): all 31 entries run against `snakepit-legacy.sif`,
 `snakepit-manylinux2014.sif`, `snakepit-manylinux_2_28.sif` and
 `snakepit-modern.sif` pass (3.16, 3.16t and pypy2.7 as bare interpreters);
-the 2 cross-architecture entries were skipped because those images were not
-built. PyPy 3.11 is tested in `snakepit-manylinux_2_28.sif` and
-`snakepit-modern.sif`, no longer in `snakepit-manylinux2014.sif` (numpy's
-pp311 wheels need glibc >= 2.28). The manylinux_2_28 image has no 3.16/3.16t
-(not in the pypa base image yet).
+on x86_64 the p9 and aarch64 entries are skipped (different architecture / not
+built). On a POWER9 node, `snakepit-p9.sif`'s 7 test entries pass natively
+(2026-11-11), and the aarch64 entry is skipped. PyPy 3.11 is tested in
+`snakepit-manylinux_2_28.sif` and `snakepit-modern.sif`, no longer in
+`snakepit-manylinux2014.sif` (numpy's pp311 wheels need glibc >= 2.28). The
+manylinux_2_28 image has no 3.16/3.16t (not in the pypa base image yet).
 
 
 ## What Gets Tested

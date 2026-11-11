@@ -85,6 +85,20 @@ pre-release interpreters (3.16, free-threading 3.16t) and PyPy 3.11.
   no source build needed -- this is what manylinux2014 can no longer do for
   3.12+.
 
+#### Image 5: `snakepit-p9.sif` (Ubuntu 24.04 + conda-forge, POWER9/ppc64le)
+- Built and tested **natively** on a POWER9 node (see `build_p9.sh`), not under
+  QEMU. Ubuntu 24.04 + micromamba, one conda-forge environment per Python,
+  exposed as `python3.X`.
+- **Python 3.8, 3.11, 3.12, 3.13, 3.14, 3.15, 3.14t** -- all tested.
+- **Why conda-forge here**: PyPI publishes no ppc64le wheels for numpy, h5py
+  or numba. The silx wheelhouse
+  (https://www.silx.org/pub/wheelhouse/) has ppc64le numpy and h5py but no
+  numba; conda-forge carries all three for Python 3.8-3.15 and free-threading,
+  so it is the binary source. Nothing is compiled from source.
+- 3.11 is numpy 1 (Python 3.11.6, numpy 1.24.4, h5py 3.10.0, numba 0.57.1 --
+  the ESRF `module load jupyter-slurm` 2023.10.x stack); 3.8 is also numpy 1;
+  the rest are numpy 2.
+
 ### Common Components
 
 All images include:
@@ -274,8 +288,12 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
 - **PyPy 3.11**: uv prebuilt (pinned to pypy-3.11.15 = PyPy 7.3.23; see
   `snakepit-modern.def`), in `snakepit-modern.sif`; the base manylinux_2_28
   image also ships PyPy 3.11 (7.3.23), which is tested there too
+- **Python 3.8, 3.11-3.15 and 3.14t (in `snakepit-p9.sif`)**: one conda-forge
+  environment per Python, provisioned by micromamba on an Ubuntu 24.04 base.
+  PyPI has no ppc64le wheels for numpy/h5py/numba, so conda-forge is the
+  binary source (the silx wheelhouse covers numpy and h5py but not numba).
 
-### Why Four Images?
+### Why These Images?
 
 1. **legacy** (Ubuntu 18.04) is the only base whose own apt repos still carry
    2.7/3.6/3.7 natively; 3.8 and PyPy 3.9 are bolted on via uv since no
@@ -293,9 +311,12 @@ The `--fakeroot` flag enables rootless builds without requiring `sudo`, making t
    and also re-tests 3.9-3.11 against a modern glibc baseline -- preserving
    the original six-container design's deliberate dual-glibc coverage for
    those three versions (once here, once in manylinux2014)
-5. Four images (down from an earlier six) keeps every interpreter binary
+5. Four x86 images (down from an earlier six) keeps every interpreter binary
    (apt/deadsnakes/uv/pypy.org/manylinux) while avoiding the two
    old-glibc-vs-new-CPython dead ends described above
+6. **ppc64le** is a separate concern: `snakepit-p9.sif` builds natively on a
+   POWER9 node with conda-forge binaries (see Image 5), while aarch64 stays a
+   QEMU smoke test until an ARM machine is available.
 
 ### Virtual Environment Strategy
 
@@ -374,6 +395,9 @@ snakepit/
 |-- snakepit-manylinux2014.def      # Apptainer definition (Python 3.9-3.11 tested, CentOS 7)
 |-- snakepit-manylinux_2_28.def     # Apptainer definition (Python 3.9-3.15, 3.14t, 3.15t, PyPy 3.11)
 |-- snakepit-modern.def             # Apptainer definition (Python 3.9-3.16, 3.14t, 3.15t, 3.16t)
+|-- snakepit-p9.def                 # Apptainer definition (POWER9/ppc64le, conda-forge)
+|-- build_p9.sh                     # One-command native POWER9 build + test (sbatch)
+|-- test_numpy_abi.sh               # numpy 1 vs 2 extension ABI check (x86_64)
 |-- snakepit-legacy.sif             # Built container (generated)
 |-- snakepit-manylinux2014.sif      # Built container (generated)
 |-- snakepit-manylinux_2_28.sif     # Built container (generated)
@@ -452,7 +476,7 @@ snakepit/
   manylinux2014-tagged wheels for cp312/cp313) and h5py 3.14.0 -- but those
   two are not in the test matrix. 3.14 and 3.14t/3.15/3.15t have no
   manylinux2014 wheels at all. Everything is installed wheels-only (see the
-  "never build from source" rule in AGENTS.md). Real testing for 3.12+ happens
+  "compiling upstream is a smell" policy in AGENTS.md). Real testing for 3.12+ happens
   in `snakepit-manylinux_2_28.sif` and `snakepit-modern.sif` instead. Downstream
   wheels still tagged manylinux2014 (e.g. bslz4_to_sparse, c2ImageD11 x86_64)
   should be tested here for the old-glibc claim and in
